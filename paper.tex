@@ -1,0 +1,177 @@
+\documentclass[10pt, conference, letterpaper]{IEEEtran}
+
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{listings} 
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{subcaption}
+\usepackage{tabularx}
+\usepackage{float}
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{algorithm}
+\usepackage{setspace}
+\usepackage[noend]{algpseudocode}
+\usepackage{algorithmicx}
+\usepackage{makecell}
+\usepackage{multicol}
+\usepackage{listings}
+\usepackage{verbatim}
+\usepackage{fancyvrb}
+\usepackage{lineno}
+\usepackage[square,numbers]{natbib}
+\usepackage{lipsum}
+\usepackage{syntax}
+\usepackage{cleveref}
+\usepackage{layouts}
+\usepackage{tablefootnote}
+\usepackage{footnote}
+\usepackage{tikz}
+\usepackage{bbding}
+\usepackage{pifont}
+\usepackage{wasysym}
+\usepackage{amssymb}
+\usepackage{url}
+\usepackage{xspace}
+\usepackage{diagbox}
+\usepackage[flushleft]{threeparttable}
+\usepackage{alltt,xcolor}
+\usepackage[justification=centering]{caption}
+\usepackage{csquotes,filecontents}
+
+\usepackage{color}
+
+\usepackage{titlesec}
+
+%\titleformat*{\section}{\normalsize\bfseries}
+\titlespacing{\section}{0pt}{4pt}{4pt}
+\titlespacing{\subsection}{0pt}{4pt}{4pt}
+\titlespacing{\subsubsection}{0pt}{4pt}{4pt}
+
+\definecolor{OliveGreen}{cmyk}{0.64,0,0.95,0.40}
+\definecolor{ao}{rgb}{0.0, 0.5, 0.0}
+\definecolor{asparagus}{rgb}{0.53, 0.66, 0.42}
+\definecolor{applegreen}{rgb}{0.55, 0.71, 0.0}
+\definecolor{aogreen}{rgb}{0.0, 0.5, 0.0}
+\definecolor{columbiablue}{rgb}{0.61, 0.87, 1.0}
+\definecolor{cornellred}{rgb}{0.7, 0.11, 0.11}
+\definecolor{cornflowerblue}{rgb}{0.39, 0.58, 0.93}
+\definecolor{denim}{rgb}{0.08, 0.38, 0.74}
+
+\colorlet{BtfulGreen}{black!30!green!70!}
+\colorlet{BtfulOrange}{white!5!orange!95!}
+\colorlet{BtfulGray}{white!50!gray!50!}
+
+\algnewcommand\INPUT{\item[\textbf{Input:}]}%
+\algnewcommand\OUTPUT{\item[\textbf{Output:}]}%
+\newcommand{\algorithmicbreak}{\textbf{break}}
+\newcommand{\BREAK}{\State \algorithmicbreak}
+
+\newcommand{\specialcell}[2][c]{%
+  \begin{tabular}[#1]{@{}c@{}}#2\end{tabular}}
+
+\newcommand{\specialcellleft}[2][c]{%
+  \begin{tabular}[#1]{@{}l@{}}#2\end{tabular}}
+
+\newcommand{\specialcellright}[2][c]{%
+  \begin{tabular}[#1]{@{}r@{}}#2\end{tabular}}
+
+\setlength{\paperheight}{11in}
+\setlength{\paperwidth}{8.5in}
+\tolerance=1000
+
+\setlist{nolistsep}
+\setlength{\abovecaptionskip}{0.8pt}
+\setlength{\floatsep}{5pt}
+\setlength{\textfloatsep}{1pt}
+
+\setlength{\belowcaptionskip}{0.5pt}
+%\setlength{\skip\footins}{0pt}
+
+\newcommand{\para}[1]{\noindent\textbf{#1}}
+\newcommand{\cut}[1]{}
+\newcommand{\etal}{{\em et al.}}
+
+\newcommand{\sysname}{RINC\xspace}
+\newcommand{\gurobi}{RINC-OPT\xspace}
+\newcommand{\true}{\centering$\checkmark$}
+\newcommand{\false}{\centering$\times$}
+
+\newcommand{\vA}{\mathbf{A}}
+\newcommand{\vx}{\vec{x}}
+\newcommand{\vy}{\vec{y}}
+\newcommand{\vz}{\vec{z}}
+\newcommand{\qun}[1]{\textcolor{red}{(QUN: #1)}}
+\newcommand{\todo}[1]{\textcolor{red}{(TODO: #1)}}
+\newcommand{\red}[1]{{\color{red}#1}}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+
+\hyphenation{RINC}
+
+\setitemize{noitemsep,topsep=0em,parsep=0em,partopsep=3pt}
+
+\DeclareRobustCommand*{\IEEEauthorrefmark}[1]{%
+    \raisebox{0pt}[0pt][0pt]{\textsuperscript{\footnotesize\ensuremath{#1}}}}
+
+\newcommand*\circled[1]{\tikz[baseline=(char.base)]{
+            \node[shape=circle,draw,inner sep=0.7pt] (char) {#1};}}
+
+% \IEEEoverridecommandlockouts\IEEEpubid{\makebox[\columnwidth]{ Haifeng Zhou is the corresponding author. \hfill}\hspace{\columnsep}\makebox[\columnwidth]{ }}
+
+\begin{document}
+
+\title{\makebox[\linewidth]{\parbox{\dimexpr\textwidth+1cm\relax}{\centering \sysname: Resource-Efficient In-Network Computing}}\vspace{-0.1in}}
+% \author{
+%      \IEEEauthorblockN{Xiang Chen\IEEEauthorrefmark{1,}\IEEEauthorrefmark{2}, Xi Sun\IEEEauthorrefmark{1}, Wenbin Zhang\IEEEauthorrefmark{1}, Xin Yao\IEEEauthorrefmark{1}, Zizheng Wang\IEEEauthorrefmark{1}, Hongyan Liu\IEEEauthorrefmark{1},\\ Qun Huang\IEEEauthorrefmark{3}, Gaoning Pan\IEEEauthorrefmark{4}, Xuan Liu\IEEEauthorrefmark{5,}\IEEEauthorrefmark{6}, Haifeng Zhou\IEEEauthorrefmark{1}, Chunming Wu\IEEEauthorrefmark{2,}\IEEEauthorrefmark{1}}
+%      \IEEEauthorblockA{\IEEEauthorrefmark{1}Zhejiang University \IEEEauthorrefmark{2}Quan Cheng Laboratory \IEEEauthorrefmark{3}Peking University \IEEEauthorrefmark{4}Hangzhou Dianzi University}  \IEEEauthorrefmark{5}Yangzhou University \IEEEauthorrefmark{6}Southeast University\vspace{-0.1in}}
+
+
+% make the title area
+\maketitle
+
+\pagenumbering{gobble}
+
+\fontdimen2\font=0.1ex
+\input{abstract}
+\fontdimen2\font=3pt
+\input{introduction}
+\input{background}
+\input{overview}
+\input{design}
+\input{heuristic}
+\input{placer}
+\input{evaluation1}
+% %\input{related-work}
+\input{conclusion}
+
+\clearpage
+%\balance
+
+%{\small
+%\bibliographystyle{abbrv}
+%\bibliography{paper}
+%}
+
+%\section*{Acknowledgement}
+
+%We thank our reviewers for their insightful and constructive comments. 
+%\para{Acknowledgement}. We thank reviewers for their comments. This work is supported by ``Pioneer'' and ``Leading Goose'' R\&D Program of Zhejiang (2024C01066), Quan Cheng Laboratory (QCLZD202304), Natural Science Foundation of China (61902362, 62172007), the Provincial Key R\&D Program of Zhejiang (2021C01032), the Yangzhou Science and Technology Plan Project (YZ2023200), Self-Developing Experimental Instrument and Equipment Project of Yangzhou University (zzyq2023zy06), the Fundamental Research Funds for the Central Universities (Zhejiang University NGICS Platform), and the Major Science and Technology Infrastructure Project of Zhejiang Lab (Large-scale experimental device for information security of new generation industrial control system).
+
+%This work is supported by the National Key R\&D Program of China (2019YFB1802600), the National Natural Science Foundation of China (61902362, and 62172007), the Joint Funds of the National Natural Science Foundation of China (U20A20179), the Fundamental Research Funds for the Central Universities (Zhejiang University NGICS Platform), and the Major Science and Technology Infrastructure Project of Zhijiang Laboratory (Large-scale experimental device for information security of new generation industrial control system).
+
+%the Key R\&D Program of Zhejiang Province (2021C01036), 
+
+%\clearpage
+\renewcommand\refname{Reference}
+\bibliographystyle{IEEEtran}
+{\footnotesize
+\bibliography{paper}}
+
+% that's all folks
+\end{document}

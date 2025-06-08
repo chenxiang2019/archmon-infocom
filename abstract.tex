@@ -1,0 +1,13 @@
+% old
+% \begin{abstract}
+% In-network computing (INC) has been a fundamental building block that accelerates computing tasks by offloading them to data plane switches. However, existing INC frameworks often include massive \emph{INC task copies} (i.e., replicating task components inside or across switches) to ensure execution correctness, leading to unnecessary switch resource consumption. 
+
+% We propose \sysname, the \underline{R}esource-efficient \underline{INC} framework. Its key idea is to decrease INC task copies: \sysname replaces the sub-optimal manual decomposition of INC tasks with automatic decomposition that reduce inter-switch task copies via careful task analysis. Then it encodes constraints based on the characteristics of modern switches to eliminate intra-switch task copies. We have implemented \sysname on Tofino switches. Our experiments present that compared to state of the arts, \sysname can improve resource efficiency by 61\%. Also, applying \sysname to edge cloud networks built by a global service provider and an Internet service provider helps administrators deploy 0.7$\sim$5.1$\times$ more INC tasks. 
+% \end{abstract}
+
+% new
+\begin{abstract}
+In-network computing (INC) has been a fundamental building block that accelerates computing tasks by offloading them to data plane switches. However, existing INC frameworks often include massive \emph{INC task copies} (i.e., replicating task components inside or across switches) to ensure execution correctness, leading to unnecessary switch resource consumption. 
+
+We propose \sysname, the \underline{R}esource-efficient \underline{INC} framework. Its key idea is to decrease INC task copies: \sysname replaces the sub-optimal manual decomposition of INC tasks with automatic decomposition that reduce inter-switch task copies via careful task analysis. Then it encodes constraints based on the characteristics of modern switches to eliminate intra-switch task copies. Also, \sysname offers a greedy-based heuristic that solves the problem in a near-optimal and timely manner. We have implemented \sysname on Tofino switches. Our experiments present that compared to state of the arts, \sysname can improve resource efficiency by 61\%. Also, applying \sysname to edge cloud networks built by a global service provider and an Internet service provider helps administrators deploy 0.7$\sim$5.1$\times$ more INC tasks. 
+\end{abstract}
