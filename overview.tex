@@ -1,16 +1,50 @@
-\section{Overview of \sysname}
+\section{Overview of \sysname}\label{overview}
 
-\para{Goals}. 
+\para{Goals}. We aim to achieve two goals of network measurement.
 
+\begin{itemize}[leftmargin=*]
+%
+    \item \textbf{G1: High accuracy}, i.e., measuring large flows and small flows accurately (addressing \textbf{L1}, \S\ref{sketches}). 
+%
+    \item \textbf{G2: Resource efficiency}, i.e., avoiding high resource overheads in measurement data collection (addressing \textbf{L2}, \S\ref{int}). 
+%
+\end{itemize}
+
+\para{Key idea}. According to our analysis, we observe that sketches and INT complement each other. More precisely, in Table~I, we summarize the advantages and limitations of sketches and INT: Sketches exhibit both high accuracy and resource efficiency for large flows, but they fall short for small flows; INT can provide high accuracy for both large and small flows, but they come at the cost of high resource consumption. 
+
+In this context, we conclude the opportunities of combining sketches and INT: we can use sketches to measure large flows while using INT to measure small flows. Doing so can achieve both high accuracy and resource efficiency. In detail, traffic in modern networks is skewed \cite{roy2015inside,huang2021toward,caida,benson2010network,yang2018elastic}. So most packets originate from large flows, which are accurately and efficiently measured by sketches. For other packets from small flows, they are measured by INT, ensuring their full accuracy. Also, their number is small, limiting INT's resource consumption. Hence, both \textbf{G1} and \textbf{G2} can be achieved. 
 
 \para{Challenges}.
+However, while it is technically sound, leveraging these opportunities faces three system-level challenges.
 
+\begin{itemize}[leftmargin=*]
+%
+    \item \textbf{C1: Measurement point selection with incomplete knowledge}. Traffic routing details are usually unknown in advance. As such, selecting measurement points (i.e., the switches that execute sketches and INT) is non-trivial. First, guaranteeing that every flow traverses at least one point when routing paths are unknown is challenging. This uncertainty may result in over-provisioning of measurement points, increasing deployment overheads. Second, measurement points should be close to the control plane. Otherwise, measurement data collection may suffer from high latency, delaying network management. Thus, without precise path knowledge, achieving both high coverage and low collection latency is NP-hard. 
+%
+    \item \textbf{C2: General data reduction for heterogeneous measurement data}. For resource efficiency, measurement data should be minimized to save network bandwidth and control plane resources. However, such reduction faces the inherent heterogeneity between sketch data (e.g., structured counter arrays) and INT headers (e.g., unstructured hop-by-hop metadata). Specifically, reducing sketch data needs to preserve counter relationships over time, while reducing INT data should avoid modifying original per-switch information. Such differences impede the design of reducing measurement data. Without careful analysis, simply collaborating existing data reduction techniques would be ineffective and even hurt data integrity. 
+%
+    \item \textbf{C3: Congestion-free measurement data collection under bursts}. Measurement data from sketches and INT generates data streams that may saturate network paths connecting measurement points with the control plane. Thus, this challenge stems from the need to prevent the streams of measurement data from causing congestion during collection. For example, when thousands of incoming flows simultaneously activate INT at the switch, the resulting O(10$^2$)\,Gbps data traffic can overwhelm 100-Gbps paths in milliseconds. Thus, avoiding congestion requires complicated modeling of worst-case collection rates to prevent collisions with normal traffic. 
+    %Profiling ``safe'' collection rates alone is insufficient because traffic dynamics cause rates to vary unpredictably. 
+%
+\end{itemize}
 
-\para{Key ideas}. 
+\para{Design}. In response, we design \sysname, a framework that co-designs sketches and INT to collectively achieve high accuracy (\textbf{G1}) and resource efficiency (\textbf{G2}). To address the above challenges, \sysname embraces three-pronged system mechanisms. 
 
+\begin{itemize}[leftmargin=*]
+%
+    \item \emph{Near-optimal measurement point selection}. Given a network and a set of orientation-destination (OD) pairs, each of which represents the ingress and egress of a specific flow, \sysname chooses enough switches to place sketches and INT. It aims at maximizing the coverage of measured flows and minimizing the distance between the switches where flows are measured and the control plane where traffic statistics are collected and analyzed. Next, it formulates such an optimization as a multi-objective facility location problem and leverages Lagrangian relaxation to obtain near-optimal decisions (addressing \textbf{C1}). 
+%
+    \item \emph{Resource-efficient measurement data reduction}. At runtime, sketches report their data that summaries large flow statistics to the control plane while INT keeps track of small flows. However, when all measurement data, including sketch and INT data, is collected to the control plane, their large volume can easily saturate control plane resources in a short time. In response, we analyze the characteristics of various types of measurement data. With analysis results, we design \sysname to adopt a suite of techniques, e.g., merging similar data and only sending data delta, in data collection to safely minimize data while preserving integrity (addressing \textbf{C2}). 
+%
+    \item \emph{Congestion-free measurement data collection}. Switches collectively report high-speed streams of measurement data to the control plane via normal network paths. Therefore, these streams may be collided with normal traffic, causing network congestion and significant data loss. To prevent congestions, \sysname automatically profiles the maximum possible rate of sending measurement data from every switch to the control plane. According to profiling results, it decides which paths to transfer data while avoiding congestion (addressing \textbf{C3}). 
+%
+\end{itemize}
 
 \para{Architecture}. 
 
 
-\para{Step-by-step example}. 
+%\para{Step-by-step example}. 
 
+
+
+\section{Design of \sysname}\label{design}
