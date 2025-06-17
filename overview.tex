@@ -4,7 +4,7 @@
 
 \begin{itemize}[leftmargin=*]
 %
-    \item \textbf{G1: High accuracy}, i.e., measuring large flows and small flows accurately (addressing \textbf{L1}, \S\ref{sketches}). 
+    \item \textbf{G1: High accuracy}, i.hello e., measuring large flows and small flows accurately (addressing \textbf{L1}, \S\ref{sketches}). 
 %
     \item \textbf{G2: Resource efficiency}, i.e., avoiding high resource overheads in measurement data collection (addressing \textbf{L2}, \S\ref{int}). 
 %
@@ -40,7 +40,24 @@ However, while it is technically sound, leveraging these opportunities faces thr
 %
 \end{itemize}
 
-\para{Architecture}. 
+\para{Architecture}. Figure~2 presents the architecture of \sysname, which employs a five-step workflow. 
+
+\begin{itemize}[leftmargin=*]
+%
+    \item[1] Administrators submit the sketches and INT techniques they plan to use to \sysname. As a general framework, \sysname supports arbitrary types of sketches and INT techniques. 
+%
+    \item[2] Without precise information, \sysname solves the selection of measurement points via a Lagrangian relaxation algorithm that yields near-optimal decisions within polynomial time.
+    %\sysname formulates the selection of measurement points that deploy sketches and INT to cover as many flows as possible into a multi-objective facility location problem \cite{karatas2018iterative} with coverage constraints. Thereafter, it solves this problem via a Lagrangian relaxation algorithm that yields near-optimal decisions within polynomial time. 
+%
+    \item[3] \sysname performs sketches and INT atop selected switches. Each flow will be first measured by sketches. If it is identified as a large flow, its data is approximately recorded by sketches. Otherwise, its data is piggybacked on its headers via INT. 
+%
+    \item[4] Before emitting measurement data, i.e., periodically collecting sketch data or sending INT headers, \sysname minimizes data by using the techniques that best match each data type. 
+    %\sysname minimizes data to reduce resource consumption. It first characterizes the differences between sketch data and INT data. After that, it uses corresponding data reduction techniques that best match each data type to minimize data. 
+%
+    \item[5] \sysname selects network paths to transfer measurement data with the goal of avoiding congestion with normal traffic. The control plane receives data, which is input to applications for subsequent network management. 
+    %For each type of data emitted by each switch, \sysname estimates the worst-case rate of sending such data. According to 
+%
+\end{itemize}
 
 
 %\para{Step-by-step example}. 
