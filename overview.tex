@@ -62,6 +62,203 @@ However, while it is technically sound, leveraging these opportunities faces thr
 
 %\para{Step-by-step example}. 
 
+\section{Near-Optimal Measurement Point Selection}
+
+\para{Overview.} The measurement point selection problem aims to select programmable switches in the network to deploy sketches and INT. It has two objectives: (1) maximizing flow coverage, i.e., measuring as many flows as possible, and (2) minimizing the distance between the control plane and switches that execute network measurement to enable timely data collection.
+
+\begin{table}[t]
+\caption{Notation of major symbols used by this paper.}
+\label{notation}
+\newcommand{\tabincell}[2]{\begin{tabular}{@{}#1@{}}#2\end{tabular}}
+\centering
+\resizebox{1.0\linewidth}{!}{
+\small
+\begin{tabular}{p{0.13\linewidth}p{0.95\linewidth}}
+\toprule
+\textbf{Symbol} & \textbf{Description} \\
+\midrule
+$G$ & Network $G = (V, E)$: $V$ contains switches; $E$ contains links \\
+$P \subseteq V$ & Programmable switches that enable sketches and INT \\
+$C \subseteq V$ & Control plane nodes \\
+$\mathcal{F}$ & Set of flows \\
+$o_f, d_f$ & Orientation/destination of flow $f \in \mathcal{F}$ \\
+$\mathcal{P}_f$ & Programmable switches on shortest paths for flow $f$ \\
+$\delta(p,c)$ & Distance between switch $p$ and control node $c$ \\
+$\alpha$ & Coverage-distance tradeoff parameter ($0 \leq \alpha \leq 1$) \\
+$x_p$ & 0-1 variable indicating sketch deployment at switch $p$ \\
+$y_p$ & 0-1 variable indicating INT deployment at switch $p$ \\
+$u_p$ & 0-1 variable indicating measurement activation at switch $p$ \\
+$z_{p,c}$ & 0-1 variable indicating data routing from $p$ to control node $c$ \\
+$w_f$ & 0-1 variable indicating flow coverage \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\para{Input.} The input comprises:
+(1) the network $G = (V, E)$;
+(2) programmable switches $P \subseteq V$ supporting sketches and INT;
+(3) control plane nodes $C \subseteq V$;
+(4) a set $\mathcal{F}$ of flows, where each flow $f \in \mathcal{F}$ only indicates an OD pair $(o_f, d_f)$ \cite{liu2016one,anup2022hetero}, where $o_f$ and $d_f$ are the ingress and egress of $f$, respectively; 
+(5) for each flow $f$, the set $\mathcal{P}_f \subseteq P$ of switches on \emph{any shortest path} between $o_f$ and $d_f$;
+and (6) the distance metric $\delta: V \times C \to \mathbb{R}^+$ (e.g., hop count).
+
+\para{Output.} The output comprises:
+(1) $x_p \in \{0,1\}$ $\forall p \in P$: $x_p=1$ if sketch deployed at switch $p$;
+(2) $y_p \in \{0,1\}$ $\forall p \in P$: $y_p=1$ if INT deployed at switch $p$;
+(3) $u_p \in \{0,1\}$ $\forall p \in P$: $u_p=1$ if switch $p$ is selected ($x_p =1 \lor y_p=1$);
+(4) $z_{p,c} \in \{0,1\}$ $\forall p \in P, c \in C$: $z_{p,c}=1$ if data from $p$ sent to control node $c$;
+and (5) $w_f \in \{0,1\}$ $\forall f \in \mathcal{F}$: $w_f=1$ if flow $f$ is covered.
+
+\para{Objective.} The objective refers to:
+\begin{equation}
+\min\ -\alpha \sum_{f \in \mathcal{F}} w_f + (1-\alpha) \sum_{\substack{p \in P \\ c \in C}} z_{p,c} \cdot \delta(p, c)
+\label{eq:objective}
+\end{equation}
+where the user-configurable parameter $\alpha \in [0,1]$ balances the objective of maximizing coverage and that of minimizing the distances between selected switches and control plane nodes.
+
+\para{Constraints.} The problem has the following major constraints: Eq.2-4 bound the number of selected switches; Eq.5 presents that when a flow $f$ is covered, at least one switch on the shortest paths that connect the OD pair of $f$ should be selected; Eq.6 shows that each selected switch should send data to a control plane node; and Eq.7 limits decision variables. 
+
+\vspace{-7pt}
+{\footnotesize
+\begin{align}
+u_p &\geq x_p \quad \forall p \in P \\
+u_p &\geq y_p \quad \forall p \in P \\
+u_p &\leq x_p + y_p \quad \forall p \in P 
+\end{align}
+\begin{equation}
+    w_f \leq \sum_{p \in \mathcal{P}_f} u_p \quad \forall f \in \mathcal{F}
+\end{equation}
+\begin{equation}
+    \sum_{c \in C} z_{p,c} = u_p \quad \forall p \in P
+\end{equation}
+\begin{equation}
+    x_p, y_p, u_p, w_f, z_{p,c} \in \{0,1\}
+\end{equation}}
+
+\para{Hardness}. This measurement point selection problem is NP-hard. First, according to its dual combinatorial structures, this problem reduces to the set cover problem: each programmable switch $p \in P$ corresponds to the set $S_p = \{ f \in \mathcal{F} \mid p \in \mathcal{P}_f \}$ covering the flows possibly traversing $p$. This step establishes a set system with the universe $U = \mathcal{F}$ and collection $\mathcal{S} = \{ S_p \}$, where maximizing coverage $\sum w_f$ equals minimizing uncovered flows (i.e., a standard NP-hard set cover problem). Second, the objective of minimizing distances, i.e., $\sum z_{p,c} \delta(p,c)$, forms an uncapacitated facility location subproblem, in which selected switches, i.e., $u_p=1$, are facilities, control plane nodes in $C$ are clients, and $\delta(p,c)$ are assignment costs. 
+
+To sum up, the joint objective in Eq.1 forms a multi-objective set cover with facility location costs. In particular, $\alpha$ modulates between flow coverage and resource efficiency: when $\alpha=1$, the problem is an NP-hard set cover problem; when $\alpha=0$, the problem is an NP-hard facility location problem.  
+
+\para{Solving}. Given the NP hardness, directly solving the problem using commercial MIP solvers such as Gurobi \cite{gurobi} and CPLEX \cite{cplex} inevitably suffers from excessively long execution time or fails to find possible solutions. In response, \sysname employs Lagrangian relaxation as follows.
+
+We relax the coverage constraints using Lagrange multipliers \(\lambda_f \geq 0\). The Lagrangian is:
+
+\vspace{-10pt}
+{\footnotesize
+\begin{align}
+L(\boldsymbol{\lambda}) = &\min_{\mathbf{u},\mathbf{w},\mathbf{z}} \left[ 
+-\alpha \sum_{f} w_f + (1-\alpha) \sum_{p,c} z_{p,c} \delta(p,c) \right. \nonumber \\ &\left. + \sum_{f} \lambda_f \left( \sum_{p \in \mathcal{P}_f} u_p - w_f \right)
+\right] 
+= \min_{\mathbf{u},\mathbf{w}} \left[ 
+\underbrace{\sum_{p} u_p \left( \sum_{f: p \in \mathcal{P}_f} \lambda_f \right)}_{\text{Switch penalty}} \right. \nonumber \\ &+ \left.
+\underbrace{\sum_{f} w_f (-\alpha - \lambda_f)}_{\text{Coverage reward}} +
+\underbrace{(1-\alpha) \sum_{p,c} z_{p,c} \delta(p,c)}_{\text{Distance cost}}
+\right]
+\end{align}}
+\vspace{-7pt}
+
+\noindent where $\lambda_f$ is the Lagrange multiplier for flow $f$ and quantifies the penalty weight for not covering $f$. The switch penalty refers to the penalty for selecting a switch. It represents that selecting a switch needs to pay the penalty of covering all its measurable flows. Therefore, it transforms the original coverage constraints into switch selection penalties that balance against the reward of covering flows and the distance cost of transferring data from selected switches to the control plane. 
+
+\begin{algorithm}[t]
+\caption{Solve \( L(\boldsymbol{\lambda}) \)}
+\label{alg:solve-lagrangian}
+\begin{algorithmic}[1]
+\footnotesize
+\Require \(\boldsymbol{\lambda}\), \(G\), \(\mathcal{F}\), \(P\), \(C\), \(\delta\), \(\alpha\)
+\Ensure \(L(\boldsymbol{\lambda})\), primal variables
+\State Initialize \(u_p = 0\), \(w_f = 0\) \(\forall p \in P, f \in \mathcal{F}\)
+\For{each switch \(p \in P\)}
+  \State Compute \(\beta_p = \sum_{f: p \in \mathcal{P}_f} \lambda_f\) \Comment{{\color{aogreen}Aggregate flow penalties}}
+  \State Compute \(\gamma_p = (1-\alpha) \min_{c \in C} \delta(p, c)\) \Comment{{\color{aogreen}Min distance cost}}
+  \If{\(\beta_p + \gamma_p < 0\)} \Comment{{\color{aogreen}Negative reduced cost}}
+    \State Set \(u_p = 1\)
+    \State Assign \(z_{p,c^*} = 1\) for \(c^* = \arg\min_c \delta(p,c)\)
+  \EndIf
+\EndFor
+\For{each flow \(f \in \mathcal{F}\)}
+  \If{\(-\alpha - \lambda_f < 0\)} \Comment{{\color{aogreen}Negative coverage reward}}
+    \State Set \(w_f = 1\) \Comment{{\color{aogreen}Always true for \(\lambda_f \geq 0, \alpha > 0\)}}
+  \EndIf
+\EndFor
+\State \Return \(L(\boldsymbol{\lambda}) = \sum_p u_p (\beta_p + \gamma_p) + \sum_f w_f (-\alpha - \lambda_f)\)
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[t]
+\caption{Subgradient Optimization for Dual Problem}
+\label{alg:subgradient}
+\begin{algorithmic}[1]
+\footnotesize
+\Require Max iterations \(T\), step size \(\theta_t\)
+\Ensure \(\max_t L(\boldsymbol{\lambda}^{(t)})\)
+\State Initialize \(\lambda_f^{(0)} = 0\) \(\forall f \in \mathcal{F}\), \(t = 0\)
+\While{\(t < T\)}
+  \State Solve \(L(\boldsymbol{\lambda}^{(t)})\) using Algorithm \ref{alg:solve-lagrangian}
+  \State Compute subgradient: \(g_f^{(t)} = \sum_{p \in \mathcal{P}_f} u_p^* - w_f^*\)
+  \State Update: \(\lambda_f^{(t+1)} = \max\left(0, \lambda_f^{(t)} + \theta_t g_f^{(t)}\right)\)
+  \State \(t \leftarrow t + 1\)
+\EndWhile
+\State \Return \(\max_t L(\boldsymbol{\lambda}^{(t)})\)
+\end{algorithmic}
+\end{algorithm}
+
+According to the above relaxation, \sysname uses a master-slave algorithm to solve the problem: Algorithm~2 is the master that controls the optimization while Algorithm~1 is the slave that is invoked in each iteration to solve the Lagrangian subproblem. Specifically, Algorithm~2 iteratively tunes Lagrange multipliers $\boldsymbol{\lambda}$ to maximize the dual function. In each iteration $t$, it (1) inputs $\boldsymbol{\lambda}^{(t)}$ to Algorithm~1, (2) receives primal variables $u_p, w_f, z_{p,c}$ and dual bound $L(\boldsymbol{\lambda})$, (3) computes the subgradient $g_f^{(t)}$ (line~4), and updates $\boldsymbol{\lambda}^{(t+1)} = \max(0, \lambda_f^{(t)} + \theta_t g_f^{(t)})$ with $\theta_t = 1/\sqrt{t}$. 
+
+In the step (1) of each iteration in Algorithm~2, Algorithm~1 computes optimal deployments for given $\boldsymbol{\lambda}$: for each switch $p$, it calculates the flow penalty $\beta_p = \sum_{f: p \in \mathcal{P}f} \lambda_f$ and collection cost $\gamma_p = (1-\alpha) \min_c \delta(p,c)$. If $\beta_p + \gamma_p < 0$, it selects $p$ to activate measurement, i.e., $u_p=1$, and assigns $p$ to the nearest control plane node, i.e., $z_{p,c^*}=1$, while marking all flows covered, i.e., $w_f=1$, since $-\alpha - \lambda_f < 0$ always holds.
+
+\begin{theorem}[Weak Duality]
+\label{thm:weak-duality}
+The optimal dual value \(d^* = \max_{\boldsymbol{\lambda}} L(\boldsymbol{\lambda})\) is a lower bound on the primal optimal value \(p^*\):
+\[
+d^* \leq p^*
+\]
+\end{theorem}
+
+\begin{proof}
+For any feasible primal solution \((\mathbf{u},\mathbf{w},\mathbf{z})\) and \(\boldsymbol{\lambda} \geq 0\):
+\[
+\begin{aligned}
+L(\boldsymbol{\lambda}) &\leq -\alpha \sum_f w_f + (1-\alpha) \sum_{p,c} z_{p,c} \delta(p,c) \\
+&+ \sum_f \lambda_f \left( \sum_{p \in \mathcal{P}_f} u_p - w_f \right) \\
+&\leq -\alpha \sum_f w_f + (1-\alpha) \sum_{p,c} z_{p,c} \delta(p,c) \\
+&= p_{\text{obj}} \quad \text{(since } \sum_{p \in \mathcal{P}_f} u_p - w_f \geq 0 \text{ by coverage)}
+\end{aligned}
+\]
+Thus, \(d^* \leq p^*\).
+\end{proof}
+
+\begin{theorem}[Optimality Gap]
+\label{thm:optimality-gap}
+Let \((\mathbf{u}^*,\mathbf{w}^*,\mathbf{z}^*)\) be the primal optimal solution. The optimality gap satisfies:
+\[
+p^* - d^* \leq \sum_{f \in \mathcal{F}} \lambda_f^* \left( \sum_{p \in \mathcal{P}_f} u_p^* - w_f^* \right)
+\]
+where \(\boldsymbol{\lambda}^*\) are optimal dual multipliers.
+\end{theorem}
+
+\begin{proof}
+From complementary slackness:
+\[
+\begin{aligned}
+p^* - d^* &= \left[ -\alpha \sum_f w_f^* + (1-\alpha) \sum_{p,c} z_{p,c}^* \delta(p,c) \right] - L(\boldsymbol{\lambda}^*) \\
+&= \sum_f \lambda_f^* \left( w_f^* - \sum_{p \in \mathcal{P}_f} u_p^* \right) \\
+&\leq 0 \quad \text{(because } w_f^* \leq \sum_{p \in \mathcal{P}_f} u_p^* \text{ and } \lambda_f^* \geq 0\text{)}
+\end{aligned}
+\]
+The gap equals the sum of violated coverage constraints scaled by \(\lambda_f^*\).
+\end{proof}
 
 
-\section{Design of \sysname}\label{design}
+% to the coverage constraints $w_f \leq \sum_{p \in \mathcal{P}_f} u_p$ by introducing multipliers $\lambda_f \geq 0$. The Lagrangian dual function is:
+
+% {\footnotesize
+% \begin{equation}
+% L(\boldsymbol{\lambda}) = \min \left[ 
+% \sum_{p} u_p \left( \sum_{f: p \in \mathcal{P}_f} \lambda_f \right) + \sum_{f} w_f (-\alpha - \lambda_f) + (1-\alpha) \sum_{p,c} z_{p,c} \delta(p,c)
+% \right],
+% \end{equation}}
+
+% \noindent subject to switch usage (Eq. \ref{eq:u_x}--\ref{eq:u_sum}), control assignment (Eq. \ref{eq:control}), and binarity constraints. This decouples into: (1) Switch activation: for each $p$, set $u_p = 1$ if $\sum_{f: p \in \mathcal{P}_f} \lambda_f + (1-\alpha) \min_c \delta(p,c) < 0$, and assign $z_{p,c^*}=1$ for nearest $c^*$; (2) Coverage: set $w_f=1$ $\forall f$ (since $-\alpha - \lambda_f < 0$). We maximize $L(\boldsymbol{\lambda})$ via subgradient optimization: initialize $\lambda_f=0$; update $\lambda_f^{(t+1)} = \max\left(0, \lambda_f^{(t)} + \frac{1}{\sqrt{t}} \left( \sum_{p \in \mathcal{P}_f} u_p^* - w_f^* \right)\right)$ for $T$ iterations.
+
+% \textbf{Optimality Analysis.}
+% By weak duality, $d^* = \max_{\boldsymbol{\lambda}} L(\boldsymbol{\lambda}) \leq p^*$ for all $\boldsymbol{\lambda} \geq 0$, as $L(\boldsymbol{\lambda}) \leq$ primal objective when constraints hold. The gap $p^* - d^*$ is bounded by $\sum_f \lambda_f^* \left( \sum_{p \in \mathcal{P}_f} u_p^* - w_f^* \right)$, vanishing when coverage constraints are tight. Primal recovery achieves $\epsilon$-optimal solutions with $p_{\text{found}} \leq p^* + \epsilon$ via switch activation heuristics.
