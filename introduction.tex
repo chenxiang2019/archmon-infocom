@@ -8,9 +8,12 @@ Although recent studies attempt to break the above dilemma, they come at additio
 
 Hereby, we issue the following question: how can we achieve accurate and resource-efficient measurement towards both large and small flows? Our answer is \sysname, which is an accurate and resource-efficient measurement framework. Our core idea originates from our observation: sketches and INT techniques are \emph{complementary} to each other. More precisely, sketches trade their accuracy of measuring small flows for resource efficiency at scale, while INT techniques trade their resource efficiency for full accuracy of measuring every flow. Hence, their advantages and limitations lead to the possible match: for traffic in modern networks, which is considered skewed (i.e., most packets come from a few large flows) \cite{roy2015inside,huang2021toward,caida,benson2010network,yang2018elastic}, \sysname leverages sketches to measure large flows while using INT techniques to measure small flows, maximizing both accuracy and efficiency.
 
-While this concept is simple, realizing it in practice remains challenging. Where to place sketches and INT to cover as many flows as possible when traffic routing is unknown in advance, how to efficiently reduce the large amount of measurement data to improve resource efficiency while keeping data integrity, and how to prevent data collection from congesting network paths and affecting normal traffic remain hard and open questions. 
+While this concept is simple, combining sketches with INT in practice faces two optimization challenges: where to install sketches and INT to measure as many flows as possible when routing information is unknown in advance, and how to prevent measurement data collection from congesting network paths and affecting normal traffic remain hard optimization problems. 
+To address these challenges, \sysname offers two optimizations, including measurement point selection that yields near-optimal decisions under unknown routing information, and congestion-free measurement data collection that profiles worst-case estimates to determine loss-free decisions. 
 
-In response, our design of \sysname embraces three mechanisms, including (1) measurement point selection that yields near-optimal decisions under unknown routing information, (2) resource-efficient measurement data reduction that efficiently and safely reduces diverse types of data, and (3) congestion-free measurement data collection that makes worst-case estimates to determine loss-free decisions. 
+%(2) resource-efficient measurement data reduction that efficiently and safely reduces diverse types of data, 
+
+%how to efficiently reduce the large amount of measurement data to improve resource efficiency while keeping data integrity, 
 
 \para{Contributions}. 
 %However, co-designing sketches and INT techniques within the same system faces the fundamental challenges of \emph{where}, \emph{how}, and \emph{how efficiently} to deploy these techniques. 
@@ -23,7 +26,8 @@ We summarize our contributions as follows.
 %
     \item According to analysis results, combining sketches and INT presents an opportunity of realizing both high accuracy and resource efficiency simultaneously. We exploit this opportunity by proposing \sysname, a framework that uses sketches to measure large flows while invoking INT for small flows, enabling accurate and resource-efficient measurements (\S\ref{overview}). 
 %
-    \item However, co-designing sketches and INT faces the challenges of \emph{where}, \emph{how}, and \emph{how efficiently} to deploy these techniques. We adopt three mechanisms, i.e., near-optimal measurement point selection, resource-efficient measurement data reduction, as well as congestion-free measurement data collection to handle these challenges in \sysname (\S\ref{design}). 
+    \item However, co-designing sketches and INT faces the challenges of \emph{where} to deploy them and \emph{how} to collect measurement data. \sysname adopts two optimizations, i.e., near-optimal measurement point selection, and congestion-free measurement data collection to handle these challenges (\S\ref{selection}-\S\ref{collection}). 
+    % resource-efficient measurement data reduction, as well as
 %
     \item We implement \sysname on our testbed that comprises $64\times 400$\,Gbps Tofino2 switches \cite{tofino2}. Testbed experiments indicate that \sysname outperforms existing standalone sketches or INT techniques with accuracy improvement (e.g., $3\times$ F1 scores) and orders-of-magnitude lower overheads. 
 %

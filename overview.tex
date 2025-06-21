@@ -4,7 +4,7 @@
 
 \begin{itemize}[leftmargin=*]
 %
-    \item \textbf{G1: High accuracy}, i.hello e., measuring large flows and small flows accurately (addressing \textbf{L1}, \S\ref{sketches}). 
+    \item \textbf{G1: High accuracy}, i.e., measuring large flows and small flows accurately (addressing \textbf{L1}, \S\ref{sketches}). 
 %
     \item \textbf{G2: Resource efficiency}, i.e., avoiding high resource overheads in measurement data collection (addressing \textbf{L2}, \S\ref{int}). 
 %
@@ -15,15 +15,15 @@
 In this context, we conclude the opportunities of combining sketches and INT: we can use sketches to measure large flows while using INT to measure small flows. Doing so can achieve both high accuracy and resource efficiency. In detail, traffic in modern networks is skewed \cite{roy2015inside,huang2021toward,caida,benson2010network,yang2018elastic}. So most packets originate from large flows, which are accurately and efficiently measured by sketches. For other packets from small flows, they are measured by INT, ensuring their full accuracy. Also, their number is small, limiting INT's resource consumption. Hence, both \textbf{G1} and \textbf{G2} can be achieved. 
 
 \para{Challenges}.
-However, while it is technically sound, leveraging these opportunities faces three system-level challenges.
+However, while it is technically sound, leveraging these opportunities faces two optimization challenges.
 
 \begin{itemize}[leftmargin=*]
 %
     \item \textbf{C1: Measurement point selection with incomplete knowledge}. Traffic routing details are usually unknown in advance. As such, selecting measurement points (i.e., the switches that execute sketches and INT) is non-trivial. First, guaranteeing that every flow traverses at least one point when routing paths are unknown is challenging. This uncertainty may result in over-provisioning of measurement points, increasing deployment overheads. Second, measurement points should be close to the control plane. Otherwise, measurement data collection may suffer from high latency, delaying network management. Thus, without precise path knowledge, achieving both high coverage and low collection latency is NP-hard. 
 %
-    \item \textbf{C2: General data reduction for heterogeneous measurement data}. For resource efficiency, measurement data should be minimized to save network bandwidth and control plane resources. However, such reduction faces the inherent heterogeneity between sketch data (e.g., structured counter arrays) and INT headers (e.g., unstructured hop-by-hop metadata). Specifically, reducing sketch data needs to preserve counter relationships over time, while reducing INT data should avoid modifying original per-switch information. Such differences impede the design of reducing measurement data. Without careful analysis, simply collaborating existing data reduction techniques would be ineffective and even hurt data integrity. 
+%    \item \textbf{C2: General data reduction for heterogeneous measurement data}. For resource efficiency, measurement data should be minimized to save network bandwidth and control plane resources. However, such reduction faces the inherent heterogeneity between sketch data (e.g., structured counter arrays) and INT headers (e.g., unstructured hop-by-hop metadata). Specifically, reducing sketch data needs to preserve counter relationships over time, while reducing INT data should avoid modifying original per-switch information. Such differences impede the design of reducing measurement data. Without careful analysis, simply collaborating existing data reduction techniques would be ineffective and even hurt data integrity. 
 %
-    \item \textbf{C3: Congestion-free measurement data collection under bursts}. Measurement data from sketches and INT generates data streams that may saturate network paths connecting measurement points with the control plane. Thus, this challenge stems from the need to prevent the streams of measurement data from causing congestion during collection. For example, when thousands of incoming flows simultaneously activate INT at the switch, the resulting O(10$^2$)\,Gbps data traffic can overwhelm 100-Gbps paths in milliseconds. Thus, avoiding congestion requires complicated modeling of worst-case collection rates to prevent collisions with normal traffic. 
+    \item \textbf{C2: Congestion-free measurement data collection under bursts}. Measurement data from sketches and INT generates data streams that may saturate network paths connecting measurement points with the control plane. Thus, this challenge stems from the need to prevent the streams of measurement data from causing congestion during collection. For example, when thousands of incoming flows simultaneously activate INT at the switch, the resulting O(10$^2$)\,Gbps data traffic can overwhelm 100-Gbps paths in milliseconds. Thus, avoiding congestion requires complicated modeling of worst-case collection rates to prevent collisions with normal traffic. 
     %Profiling ``safe'' collection rates alone is insufficient because traffic dynamics cause rates to vary unpredictably. 
 %
 \end{itemize}
@@ -34,13 +34,13 @@ However, while it is technically sound, leveraging these opportunities faces thr
 %
     \item \emph{Near-optimal measurement point selection}. Given a network and a set of orientation-destination (OD) pairs, each of which represents the ingress and egress of a specific flow, \sysname chooses enough switches to place sketches and INT. It aims at maximizing the coverage of measured flows and minimizing the distance between the switches where flows are measured and the control plane where traffic statistics are collected and analyzed. Next, it formulates such an optimization as a multi-objective facility location problem and leverages Lagrangian relaxation to obtain near-optimal decisions (addressing \textbf{C1}). 
 %
-    \item \emph{Resource-efficient measurement data reduction}. At runtime, sketches report their data that summaries large flow statistics to the control plane while INT keeps track of small flows. However, when all measurement data, including sketch and INT data, is collected to the control plane, their large volume can easily saturate control plane resources in a short time. In response, we analyze the characteristics of various types of measurement data. With analysis results, we design \sysname to adopt a suite of techniques, e.g., merging similar data and only sending data delta, in data collection to safely minimize data while preserving integrity (addressing \textbf{C2}). 
+%    \item \emph{Resource-efficient measurement data reduction}. At runtime, sketches report their data that summaries large flow statistics to the control plane while INT keeps track of small flows. However, when all measurement data, including sketch and INT data, is collected to the control plane, their large volume can easily saturate control plane resources in a short time. In response, we analyze the characteristics of various types of measurement data. With analysis results, we design \sysname to adopt a suite of techniques, e.g., merging similar data and only sending data delta, in data collection to safely minimize data while preserving integrity (addressing \textbf{C2}). 
 %
-    \item \emph{Congestion-free measurement data collection}. Switches collectively report high-speed streams of measurement data to the control plane via normal network paths. Therefore, these streams may be collided with normal traffic, causing network congestion and significant data loss. To prevent congestions, \sysname automatically profiles the maximum possible rate of sending measurement data from every switch to the control plane. According to profiling results, it decides which paths to transfer data while avoiding congestion (addressing \textbf{C3}). 
+    \item \emph{Congestion-free measurement data collection}. Switches collectively report high-speed streams of measurement data to the control plane via normal network paths. Therefore, these streams may be collided with normal traffic, causing network congestion and significant data loss. To prevent congestions, \sysname automatically profiles the maximum possible rate of sending measurement data from every switch to the control plane. According to profiling results, it decides which paths to transfer data while avoiding congestion (addressing \textbf{C2}). 
 %
 \end{itemize}
 
-\para{Architecture}. Figure~2 presents the architecture of \sysname, which employs a five-step workflow. 
+\para{Architecture}. Figure~2 presents the architecture of \sysname, which employs a four-step workflow. 
 
 \begin{itemize}[leftmargin=*]
 %
@@ -51,10 +51,10 @@ However, while it is technically sound, leveraging these opportunities faces thr
 %
     \item[3] \sysname performs sketches and INT atop selected switches. Each flow will be first measured by sketches. If it is identified as a large flow, its data is approximately recorded by sketches. Otherwise, its data is piggybacked on its headers via INT. 
 %
-    \item[4] Before emitting measurement data, i.e., periodically collecting sketch data or sending INT headers, \sysname minimizes data by using the techniques that best match each data type. 
+%    \item[4] Before emitting measurement data, i.e., periodically collecting sketch data or sending INT headers, \sysname minimizes data by using the techniques that best match each data type. 
     %\sysname minimizes data to reduce resource consumption. It first characterizes the differences between sketch data and INT data. After that, it uses corresponding data reduction techniques that best match each data type to minimize data. 
 %
-    \item[5] \sysname selects network paths to transfer measurement data with the goal of avoiding congestion with normal traffic. The control plane receives data, which is input to applications for subsequent network management. 
+    \item[4] \sysname selects network paths to transfer measurement data with the goal of avoiding congestion with normal traffic. The control plane receives data, which is input to applications for subsequent network management. 
     %For each type of data emitted by each switch, \sysname estimates the worst-case rate of sending such data. According to 
 %
 \end{itemize}
@@ -62,14 +62,13 @@ However, while it is technically sound, leveraging these opportunities faces thr
 
 %\para{Step-by-step example}. 
 
-\section{Near-Optimal Measurement Point Selection}
+\section{Near-Optimal Measurement Point Selection}\label{selection}
 
 \para{Overview.} The measurement point selection problem aims to select programmable switches in the network to deploy sketches and INT. It has two objectives: (1) maximizing flow coverage, i.e., measuring as many flows as possible, and (2) minimizing the distance between the control plane and switches that execute network measurement to enable timely data collection.
 
 \begin{table}[t]
 \caption{Notation of major symbols used by this paper.}
-\label{notation}
-\newcommand{\tabincell}[2]{\begin{tabular}{@{}#1@{}}#2\end{tabular}}
+\label{tab:notation}
 \centering
 \resizebox{1.0\linewidth}{!}{
 \small
@@ -77,22 +76,61 @@ However, while it is technically sound, leveraging these opportunities faces thr
 \toprule
 \textbf{Symbol} & \textbf{Description} \\
 \midrule
-$G$ & Network $G = (V, E)$: $V$ contains switches; $E$ contains links \\
-$P \subseteq V$ & Programmable switches that enable sketches and INT \\
+$G$ & Network topology with switches $V$ and links $E$ \\
+$P \subseteq V$ & Programmable switches supporting sketches and INT \\
 $C \subseteq V$ & Control plane nodes \\
 $\mathcal{F}$ & Set of flows \\
 $o_f, d_f$ & Orientation/destination of flow $f \in \mathcal{F}$ \\
-$\mathcal{P}_f$ & Programmable switches on shortest paths for flow $f$ \\
-$\delta(p,c)$ & Distance between switch $p$ and control node $c$ \\
+$\mathcal{P}_f$ & Programmable switches on \textit{any shortest path} for flow $f$ \\
+$\mathcal{F}_p$ & Flows that \textit{can be measured} at switch $p$ ($\{f \mid p \in \mathcal{P}_f\}$) \\
+$\delta(p,c)$ & Distance between switch $p$ and control plane node $c$ \\
 $\alpha$ & Coverage-distance tradeoff parameter ($0 \leq \alpha \leq 1$) \\
-$x_p$ & 0-1 variable indicating sketch deployment at switch $p$ \\
-$y_p$ & 0-1 variable indicating INT deployment at switch $p$ \\
-$u_p$ & 0-1 variable indicating measurement activation at switch $p$ \\
-$z_{p,c}$ & 0-1 variable indicating data routing from $p$ to control node $c$ \\
-$w_f$ & 0-1 variable indicating flow coverage \\
+$\lambda_f$ & Lagrange multiplier for flow $f$'s coverage constraints \\
+$L(\boldsymbol{\lambda})$ & Lagrangian dual function \\
+$\beta_p$ & Switch penalty = $\sum_{f \in \mathcal{F}_p} \lambda_f$ \\
+$\gamma_p$ & Data collection distance cost = $(1-\alpha) \min_{c \in C} \delta(p,c)$ \\
+$g_f$ & Subgradient = $\sum_{p \in \mathcal{P}_f} u_p - w_f$ \\
+% \hline
+% $d_p$ & Flow-switch incidence degree: $|\mathcal{F}_p|$ \\
+% $d_{\max}$ & Maximum incidence: $\max_{p \in P} |\mathcal{F}_p|$ \\
+% $s_{\max}$ & Maximum path switches: $\max_{f \in \mathcal{F}} |\mathcal{P}_f|$ \\
+$T$ & Iteration count in subgradient optimization \\
+$x_p$ & 0-1 variable = 1 if sketch deployed at switch $p$ \\
+$y_p$ & 0-1 variable = 1 if INT deployed at switch $p$ \\
+$u_p$ & 0-1 variable = 1 if switch $p$ is selected ($x_p=1 \lor y_p=1$) \\
+$z_{p,c}$ & 0-1 variable = 1 if data emitted from $p$ to control plane node $c$ \\
+$w_f$ & 0-1 variable = 1 if flow $f$ is covered (i.e., measured) \\
 \bottomrule
 \end{tabular}}
 \end{table}
+
+% \begin{table}[t]
+% \caption{Notation of major symbols used by this paper.}
+% \label{notation}
+% \newcommand{\tabincell}[2]{\begin{tabular}{@{}#1@{}}#2\end{tabular}}
+% \centering
+% \resizebox{1.0\linewidth}{!}{
+% \small
+% \begin{tabular}{p{0.13\linewidth}p{0.95\linewidth}}
+% \toprule
+% \textbf{Symbol} & \textbf{Description} \\
+% \midrule
+% $G$ & Network $G = (V, E)$: $V$ contains switches; $E$ contains links \\
+% $P \subseteq V$ & Programmable switches that enable sketches and INT \\
+% $C \subseteq V$ & Control plane nodes \\
+% $\mathcal{F}$ & Set of flows \\
+% $o_f, d_f$ & Orientation/destination of flow $f \in \mathcal{F}$ \\
+% $\mathcal{P}_f$ & Programmable switches on shortest paths for flow $f$ \\
+% $\delta(p,c)$ & Distance between switch $p$ and control node $c$ \\
+% $\alpha$ & Coverage-distance tradeoff parameter ($0 \leq \alpha \leq 1$) \\
+% $x_p$ & 0-1 variable indicating sketch deployment at switch $p$ \\
+% $y_p$ & 0-1 variable indicating INT deployment at switch $p$ \\
+% $u_p$ & 0-1 variable indicating measurement activation at switch $p$ \\
+% $z_{p,c}$ & 0-1 variable indicating data routing from $p$ to control node $c$ \\
+% $w_f$ & 0-1 variable indicating flow coverage \\
+% \bottomrule
+% \end{tabular}}
+% \end{table}
 
 \para{Input.} The input comprises:
 (1) the network $G = (V, E)$;
@@ -152,7 +190,7 @@ L(\boldsymbol{\lambda}) = &\min_{\mathbf{u},\mathbf{w},\mathbf{z}} \left[
 = \min_{\mathbf{u},\mathbf{w}} \left[ 
 \underbrace{\sum_{p} u_p \left( \sum_{f: p \in \mathcal{P}_f} \lambda_f \right)}_{\text{Switch penalty}} \right. \nonumber \\ &+ \left.
 \underbrace{\sum_{f} w_f (-\alpha - \lambda_f)}_{\text{Coverage reward}} +
-\underbrace{(1-\alpha) \sum_{p,c} z_{p,c} \delta(p,c)}_{\text{Distance cost}}
+\underbrace{(1-\alpha) \sum_{p,c} z_{p,c} \delta(p,c)}_{\text{Data collection distance cost}}
 \right]
 \end{align}}
 \vspace{-7pt}
@@ -164,7 +202,7 @@ L(\boldsymbol{\lambda}) = &\min_{\mathbf{u},\mathbf{w},\mathbf{z}} \left[
 \label{alg:solve-lagrangian}
 \begin{algorithmic}[1]
 \footnotesize
-\Require \(\boldsymbol{\lambda}\), \(G\), \(\mathcal{F}\), \(P\), \(C\), \(\delta\), \(\alpha\)
+\Require \(\boldsymbol{\lambda}\), \(G\), \(\mathcal{F}\), \(P\), \(C\), \(\delta\), \(\alpha\) (See Table~I)
 \Ensure \(L(\boldsymbol{\lambda})\), primal variables
 \State Initialize \(u_p = 0\), \(w_f = 0\) \(\forall p \in P, f \in \mathcal{F}\)
 \For{each switch \(p \in P\)}
@@ -233,7 +271,7 @@ Let \((\mathbf{u}^*,\mathbf{w}^*,\mathbf{z}^*)\) be the primal optimal solution.
 \[
 p^* - d^* \leq \sum_{f \in \mathcal{F}} \lambda_f^* \left( \sum_{p \in \mathcal{P}_f} u_p^* - w_f^* \right)
 \]
-where \(\boldsymbol{\lambda}^*\) are optimal dual multipliers.
+where \(\boldsymbol{\lambda}^*\) are the optimal dual multipliers.
 \end{theorem}
 
 \begin{proof}
@@ -248,6 +286,37 @@ p^* - d^* &= \left[ -\alpha \sum_f w_f^* + (1-\alpha) \sum_{p,c} z_{p,c}^* \delt
 The gap equals the sum of violated coverage constraints scaled by \(\lambda_f^*\).
 \end{proof}
 
+\begin{theorem}[Time Complexity]
+Given a network $G = (V, E)$, programmable switches in $P \subseteq V$, control plane nodes in $C \subseteq V$, flows in $\mathcal{F}$, and flow-switch incidence sets $\{\mathcal{P}_f\}$, the time complexity of Algorithms 1-2 is $O(T \cdot |P| \cdot (d_{\max} + |C|))$, where $T$ is the iteration count, $d_{\max} = \max_{p \in P} |\{f : p \in \mathcal{P}_f\}|$, and $|C|$ is the number of control plane nodes.
+\end{theorem}
+
+\begin{proof}
+The complexity is contributed by all the $T$ iterations of Algorithm 2, each of which invokes Algorithm 1. For Algorithm 1, it invokes: (1) for each $p \in P$, it computes $\beta_p = \sum_{f: p \in \mathcal{P}_f} \lambda_f$ in $O(d_p)$ time, where $d_p = |\{f : p \in \mathcal{P}_f\}| \leq d_{\max}$, (2) for each $p \in P$, it computes $\gamma_p = (1-\alpha) \min_{c \in C} \delta(p,c)$ in $O(|C|)$ time, (3) for each $p \in P$, it sets decision variables in $O(1)$ time. Thus, the time complexity of Algorithm 1 is $O(|P| \cdot (d_{\max} + |C|))$. For Algorithm 2, each iteration invokes: (1) $O(|P| \cdot (d_{\max} + |C|))$ Algorithm 1, (2) computing subgradient $g_f = \sum_{p \in \mathcal{P}_f} u_p$ for all $f \in \mathcal{F}$ in $O\left(\sum_f |\mathcal{P}_f|\right) = O(|P| \cdot d_{\max})$ time, and (3) updating multipliers in $O(|\mathcal{F}|) \subseteq O(|P| \cdot d_{\max})$ time. Thus, Algorithm~2 has $T$ iterations, yielding $O(T \cdot |P| \cdot (d_{\max} + |C|))$.
+\end{proof}
+
+% \begin{theorem}[Algorithm~1 Complexity]
+% The time complexity of Algorithm~1 is $\mathcal{O}(|P| \cdot (d_{\max} + |C|))$, where $|P|$ is the number of switches, $d_{\max} = \max_{p \in P} |\{f : p \in \mathcal{P}_f\}|$, and $|C|$ is the number of control plane nodes.
+% \end{theorem}
+
+% \begin{proof}
+% For each switch $p$, Algorithm 1 performs (1) $\beta_p$ computation (line~3), which complexity is $\mathcal{O}(d_p)$ ($d_p$ counts how many flows can potentially be measured by $p$), (2) $\gamma_p$ computation (line~4), which complexity is $\mathcal{O}(|C|)$, and (3) making decisions (lines~5-7), which complexity is $\mathcal{O}(1)$. To sum up, the 
+
+% Summing over $p$: $\sum_p \mathcal{O}(d_p) = \mathcal{O}(|P| \cdot d_{\max})$. Adding coverage marking $\mathcal{O}(|\mathcal{F}|)$ and noting $|\mathcal{F}| \leq |P| \cdot d_{\max}$, total complexity is $\mathcal{O}(|P| \cdot (d_{\max} + |C|))$.
+% \end{proof}
+
+% \begin{theorem}[Algorithm 2 Complexity]
+% The time complexity for $T$ iterations of Algorithm 2 is $\mathcal{O}(T \cdot |P| \cdot (d_{\max} + |C|))$.
+% \end{theorem}
+
+% \begin{proof}
+% Each iteration involves:
+% \begin{itemize}
+%   \item Algorithm 1 call: $\mathcal{O}(|P| \cdot (d_{\max} + |C|))$
+%   \item Subgradient computation: $\mathcal{O}(|\mathcal{F}| \cdot s_{\max}) \subseteq \mathcal{O}(|P| \cdot d_{\max})$ (since $\sum_f |\mathcal{P}_f| = \sum_p d_p$)
+%   \item Multiplier update: $\mathcal{O}(|\mathcal{F}|)$
+% \end{itemize}
+% Total per iteration: $\mathcal{O}(|P| \cdot (d_{\max} + |C|))$. For $T$ iterations: $\mathcal{O}(T \cdot |P| \cdot (d_{\max} + |C|))$.
+% \end{proof}
 
 % to the coverage constraints $w_f \leq \sum_{p \in \mathcal{P}_f} u_p$ by introducing multipliers $\lambda_f \geq 0$. The Lagrangian dual function is:
 
@@ -262,3 +331,51 @@ The gap equals the sum of violated coverage constraints scaled by \(\lambda_f^*\
 
 % \textbf{Optimality Analysis.}
 % By weak duality, $d^* = \max_{\boldsymbol{\lambda}} L(\boldsymbol{\lambda}) \leq p^*$ for all $\boldsymbol{\lambda} \geq 0$, as $L(\boldsymbol{\lambda}) \leq$ primal objective when constraints hold. The gap $p^* - d^*$ is bounded by $\sum_f \lambda_f^* \left( \sum_{p \in \mathcal{P}_f} u_p^* - w_f^* \right)$, vanishing when coverage constraints are tight. Primal recovery achieves $\epsilon$-optimal solutions with $p_{\text{found}} \leq p^* + \epsilon$ via switch activation heuristics.
+
+
+\section{Loss-Free Measurement Data Collection}\label{collection}
+
+\para{Overview}. After making decisions on which switches to measure traffic, \sysname determines which network paths to safely transfer measurement data from switches to control plane nodes without incurring congestion. It executes a two-step workflow. First, it estimates the worst-case sending rate of sketch data and INT data in each switch. Second, according to its estimates, it picks paths to transfer data without congestion.
+
+\para{Estimating worst-case sending rates}. \sysname models both sketch and INT data. For sketch data, the worst-case sending rate $\gamma_k^{\text{sketch}}$ for sketch $k$ is determined by:
+
+\vspace{-4pt}
+\begin{align}
+\gamma_k^{\text{sketch}} = \frac{S_k}{T_k}
+\end{align}
+
+\noindent where $S_k$ and $T_k$ refer to the sketch size in bytes and the collection window in seconds, respectively. This equation denotes that the data recorded in sketch counter arrays are periodically flushed to the control plane at the end of each window, e.g., for the sketch with 10\,MB memory, a measurement window of 1\,ms corresponds to a $\gamma_k^{\text{sketch}}=\frac{10^{6}\,\text{bytes}}{10^{-3}\,\text{s}}=8\,\text{Gbps}$.  
+
+For INT data, the worst-case rate $\gamma_p^{\text{INT}}$ at switch $p$ is:
+
+\vspace{-4pt}
+\begin{align}
+\gamma_p^{\text{INT}} = \left( \frac{C_p \times \phi}{\mu} \right)\times B_{\text{INT}} 
+\end{align}
+
+\noindent where $C_p$ refers to the bandwidth capacity of each link while $\phi$ is the maximum possible fraction of link bandwidth that can be consumed by small flows. $\phi$ can be obtained by analyzing historical traffic data \cite{roy2015inside}. $C_p\times \phi$ denotes the maximum possible byte rate contributed by small flows on a link. Moreover, since INT overheads are per-packet, \sysname converts the byte rate of $C_p\times \phi$ to the packet rate to estimate INT overheads, where $\mu$ denotes the average packet size in small flows. As such, the maximum packet rate of small flows becomes $\frac{C_p \times \phi}{\mu}$. So Eq.10 estimates the bandwidth overheads consumed by INT headers per second, where $B_{\text{INT}}$ is the size of INT headers per packet. 
+
+To sum up, the maximum possible rate of sending measurement data at switch $p$ is estimated as
+
+\vspace{-4pt}
+\begin{align}
+\Gamma_p^{\text{total}} = \sum_{k \in \mathcal{K}_p} \gamma_k^{\text{sketch}} + \gamma_p^{\text{INT}}
+\end{align}
+
+\noindent where $\mathcal{K}_p$ is the set of sketches at $p$. 
+
+%$\Gamma_p^{\text{total}}$ represents the peak load at $p$.
+
+\subsubsection{Reinforcement Learning for Path Selection}
+Given $\Gamma_p^{\text{total}}$, we formulate path selection as reinforcement learning:
+\begin{itemize}
+  \item \textbf{State $s_t$}: Link utilizations $\{u_e^t = \frac{\text{traffic}_e}{C_e} \mid e \in E\}$, queue depths $\{q_e^t\}$, and $\{\Gamma_p^{\text{total}}\}$.
+  \item \textbf{Action $a_t$}: Path splitting ratios $[\pi_{p,c}] \in [0,1]$ for traffic from $p$ to control node $c$.
+  \item \textbf{Reward $r_t$}:
+    \[
+    r_t = -\sum_{e \in E} \max(0, u_e^{t+1} - \tau_e) - \eta \cdot \mathbb{I}(u_e^{t+1} > \tau_e)
+    \]
+    where $\tau_e = 0.8$ is congestion threshold, $\eta$ = penalty weight, and $\mathbb{I}$ is indicator function.
+  \item \textbf{Objective}: Maximize $\mathbb{E}[\sum_{t=0}^\infty \gamma^t r_t]$ via PPO-trained policy $\pi_\theta$.
+\end{itemize}
+This ensures $\sum_{c} \pi_{p,c} \Gamma_p^{\text{total}} \leq C_e - \text{data\_traffic}_e$ $\forall e$, preventing saturation while adapting to traffic dynamics.
