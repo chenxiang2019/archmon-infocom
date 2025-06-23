@@ -187,7 +187,7 @@ We relax the coverage constraints using Lagrange multipliers \(\lambda_f \geq 0\
 L(\boldsymbol{\lambda}) = &\min_{\mathbf{u},\mathbf{w},\mathbf{z}} \left[ 
 -\alpha \sum_{f} w_f + (1-\alpha) \sum_{p,c} z_{p,c} \delta(p,c) \right. \nonumber \\ &\left. + \sum_{f} \lambda_f \left( \sum_{p \in \mathcal{P}_f} u_p - w_f \right)
 \right] 
-= \min_{\mathbf{u},\mathbf{w}} \left[ 
+= \min_{\mathbf{u},\mathbf{w},\mathbf{z}} \left[ 
 \underbrace{\sum_{p} u_p \left( \sum_{f: p \in \mathcal{P}_f} \lambda_f \right)}_{\text{Switch penalty}} \right. \nonumber \\ &+ \left.
 \underbrace{\sum_{f} w_f (-\alpha - \lambda_f)}_{\text{Coverage reward}} +
 \underbrace{(1-\alpha) \sum_{p,c} z_{p,c} \delta(p,c)}_{\text{Data collection distance cost}}
@@ -196,6 +196,13 @@ L(\boldsymbol{\lambda}) = &\min_{\mathbf{u},\mathbf{w},\mathbf{z}} \left[
 \vspace{-7pt}
 
 \noindent where $\lambda_f$ is the Lagrange multiplier for flow $f$ and quantifies the penalty weight for not covering $f$. The switch penalty refers to the penalty for selecting a switch. It represents that selecting a switch needs to pay the penalty of covering all its measurable flows. Therefore, it transforms the original coverage constraints into switch selection penalties that balance against the reward of covering flows and the distance cost of transferring data from selected switches to the control plane. 
+
+In this context, the dual of the Lagrangian relaxation is:
+\begin{align}
+\max_{\lambda_f \geq 0} L(\boldsymbol{\lambda}) 
+\end{align}
+subject to primal constraints in Eq.2-Eq.7. 
+%The solution is attained via subgradient ascent: $\lambda_f^{(t+1)} = \max\left(0, \lambda_f^{(t)} + \frac{1}{\sqrt{t}} \left( \sum_{p \in \mathcal{P}_f} u_p - w_f \right)\right)$.
 
 \begin{algorithm}[t]
 \caption{Solve \( L(\boldsymbol{\lambda}) \)}
@@ -232,8 +239,8 @@ L(\boldsymbol{\lambda}) = &\min_{\mathbf{u},\mathbf{w},\mathbf{z}} \left[
 \State Initialize \(\lambda_f^{(0)} = 0\) \(\forall f \in \mathcal{F}\), \(t = 0\)
 \While{\(t < T\)}
   \State Solve \(L(\boldsymbol{\lambda}^{(t)})\) using Algorithm \ref{alg:solve-lagrangian}
-  \State Compute subgradient: \(g_f^{(t)} = \sum_{p \in \mathcal{P}_f} u_p^* - w_f^*\)
-  \State Update: \(\lambda_f^{(t+1)} = \max\left(0, \lambda_f^{(t)} + \theta_t g_f^{(t)}\right)\)
+  \State Compute subgradient \(g_f^{(t)} = \sum_{p \in \mathcal{P}_f} u_p^* - w_f^*\)
+  \State Update \(\lambda_f^{(t+1)} = \max\left(0, \lambda_f^{(t)} + \theta_t g_f^{(t)}\right)\)
   \State \(t \leftarrow t + 1\)
 \EndWhile
 \State \Return \(\max_t L(\boldsymbol{\lambda}^{(t)})\)
@@ -242,10 +249,9 @@ L(\boldsymbol{\lambda}) = &\min_{\mathbf{u},\mathbf{w},\mathbf{z}} \left[
 
 According to the above relaxation, \sysname uses a master-slave algorithm to solve the problem: Algorithm~2 is the master that controls the optimization while Algorithm~1 is the slave that is invoked in each iteration to solve the Lagrangian subproblem. Specifically, Algorithm~2 iteratively tunes Lagrange multipliers $\boldsymbol{\lambda}$ to maximize the dual function. In each iteration $t$, it (1) inputs $\boldsymbol{\lambda}^{(t)}$ to Algorithm~1, (2) receives primal variables $u_p, w_f, z_{p,c}$ and dual bound $L(\boldsymbol{\lambda})$, (3) computes the subgradient $g_f^{(t)}$ (line~4), and updates $\boldsymbol{\lambda}^{(t+1)} = \max(0, \lambda_f^{(t)} + \theta_t g_f^{(t)})$ with $\theta_t = 1/\sqrt{t}$. 
 
-In the step (1) of each iteration in Algorithm~2, Algorithm~1 computes optimal deployments for given $\boldsymbol{\lambda}$: for each switch $p$, it calculates the flow penalty $\beta_p = \sum_{f: p \in \mathcal{P}f} \lambda_f$ and collection cost $\gamma_p = (1-\alpha) \min_c \delta(p,c)$. If $\beta_p + \gamma_p < 0$, it selects $p$ to activate measurement, i.e., $u_p=1$, and assigns $p$ to the nearest control plane node, i.e., $z_{p,c^*}=1$, while marking all flows covered, i.e., $w_f=1$, since $-\alpha - \lambda_f < 0$ always holds.
+In the step (1) of each iteration in Algorithm~2, Algorithm~1 computes optimal deployments for given $\boldsymbol{\lambda}$: for each switch $p$, it calculates the flow penalty $\beta_p = \sum_{f: p \in \mathcal{P}f} \lambda_f$ and collection cost $\gamma_p = (1-\alpha) \min_c \delta(p,c)$. If $\beta_p + \gamma_p < 0$, it selects $p$ to activate measurement, i.e., $u_p=1$, and assigns $p$ to the nearest control plane node, i.e., $z_{p,c^*}=1$, and then marks all flows covered, i.e., $w_f=1$, since $-\alpha - \lambda_f < 0$ always holds.
 
 \begin{theorem}[Weak Duality]
-\label{thm:weak-duality}
 The optimal dual value \(d^* = \max_{\boldsymbol{\lambda}} L(\boldsymbol{\lambda})\) is a lower bound on the primal optimal value \(p^*\):
 \[
 d^* \leq p^*
@@ -259,14 +265,13 @@ For any feasible primal solution \((\mathbf{u},\mathbf{w},\mathbf{z})\) and \(\b
 L(\boldsymbol{\lambda}) &\leq -\alpha \sum_f w_f + (1-\alpha) \sum_{p,c} z_{p,c} \delta(p,c) \\
 &+ \sum_f \lambda_f \left( \sum_{p \in \mathcal{P}_f} u_p - w_f \right) \\
 &\leq -\alpha \sum_f w_f + (1-\alpha) \sum_{p,c} z_{p,c} \delta(p,c) \\
-&= p_{\text{obj}} \quad \text{(since } \sum_{p \in \mathcal{P}_f} u_p - w_f \geq 0 \text{ by coverage)}
+&= p_{\text{obj}} \quad \text{(since } \sum_{p \in \mathcal{P}_f} u_p - w_f \geq 0 \text{ by Eq.5)}
 \end{aligned}
 \]
-Thus, \(d^* \leq p^*\).
+where $p_{\text{obj}}$ is the primal objective value for a feasible solution in the measurement point selection problem. Thus, \(d^* \leq p^*\).
 \end{proof}
 
 \begin{theorem}[Optimality Gap]
-\label{thm:optimality-gap}
 Let \((\mathbf{u}^*,\mathbf{w}^*,\mathbf{z}^*)\) be the primal optimal solution. The optimality gap satisfies:
 \[
 p^* - d^* \leq \sum_{f \in \mathcal{F}} \lambda_f^* \left( \sum_{p \in \mathcal{P}_f} u_p^* - w_f^* \right)
@@ -366,16 +371,64 @@ To sum up, the maximum possible rate of sending measurement data at switch $p$ i
 
 %$\Gamma_p^{\text{total}}$ represents the peak load at $p$.
 
-\subsubsection{Reinforcement Learning for Path Selection}
-Given $\Gamma_p^{\text{total}}$, we formulate path selection as reinforcement learning:
-\begin{itemize}
-  \item \textbf{State $s_t$}: Link utilizations $\{u_e^t = \frac{\text{traffic}_e}{C_e} \mid e \in E\}$, queue depths $\{q_e^t\}$, and $\{\Gamma_p^{\text{total}}\}$.
-  \item \textbf{Action $a_t$}: Path splitting ratios $[\pi_{p,c}] \in [0,1]$ for traffic from $p$ to control node $c$.
-  \item \textbf{Reward $r_t$}:
-    \[
-    r_t = -\sum_{e \in E} \max(0, u_e^{t+1} - \tau_e) - \eta \cdot \mathbb{I}(u_e^{t+1} > \tau_e)
-    \]
-    where $\tau_e = 0.8$ is congestion threshold, $\eta$ = penalty weight, and $\mathbb{I}$ is indicator function.
-  \item \textbf{Objective}: Maximize $\mathbb{E}[\sum_{t=0}^\infty \gamma^t r_t]$ via PPO-trained policy $\pi_\theta$.
+\para{Reinforcement learning (RL) for dynamic path selection}. Given the worst-case estimates in $\{\Gamma_p^{\text{total}}\}$, \sysname formulates path selection with a constrained Markov decision process (CMDP) to avoid saturating network paths, i.e.
+
+\vspace{-4pt}
+\begin{align}
+\min_{\pi}  & \quad \mathbb{E}\left[\sum_{t=0}^T \sum_{e \in E} q_e^t \right] \\
+\text{s.t.} & \quad \sum_{c \in C} \pi_{p,c} = 1 \quad \forall p \in P  \\
+            & \quad \Gamma_e^{\text{meas}} \leq \tau_e C_e - \Gamma_e^{\text{data}} \quad \forall e \in E 
+\end{align}
+
+\noindent where $q_e^t$ represents the queue depth in bytes on link $e$ at time $t$; $\pi_{p,c}$ is the fraction of measurement data streams from switch $p$ to control plane node $c$; $\Gamma_e^{\text{meas}}$ quantifies the measurement data streams on link $e$, i.e. 
+
+\vspace{-4pt}
+\begin{align}
+    \Gamma_e^{\text{meas}} = \sum_{p} \sum_{c} \pi_{p,c} \cdot \Gamma_p^{\text{total}} \cdot \mathbb{I}_{e \in \mathcal{P}_{p,c}}
+\end{align}
+
+\noindent where $\mathbb{I}_{e \in \mathcal{P}_{p,c}}=1$ if link $e$ belongs to path $\mathcal{P}_{p,c}$; $\Gamma_e^{\text{data}}$ quantifies data plane traffic on $e$; and $\tau_e$ represents the safety threshold that avoids congestion (e.g., 0.8 of the link capacity).
+
+Here, the inputs include $q_e^t$, $C_e$, $\Gamma_p^{\text{total}}$, $\mathbb{I}_{e \in \mathcal{P}{p,c}}$, $\Gamma_e^{\text{data}}$, and $\tau_e$. \sysname obtains them as follows: $q_e^t$ is collected by INT; $C_e$ is the link capacity that is already known in topology information; $\Gamma_p^{\text{total}}$ is computed by Eq.12; $\mathbb{I}_{e \in \mathcal{P}{p,c}}$ is calculated via shortest path algorithms such as Dijkstra; $\Gamma_e^{\text{data}}$ can be direcly obtained using existing techniques such as sFlow \cite{sFlow} and NetFlow \cite{netflow}; and $\tau_e$ is user-configurable. 
+
+Next, the output of \sysname includes (1) which paths, i.e., $\mathcal{P}_{p,c}$, to transfer measurement data from switch $p$ to control plane node $c$, and (2) split ratios, i.e., $\pi_{p,c}$, that decide how to allocate measurement traffic across these paths. 
+
+Then \sysname solves the CMDP as follows. First, it trains the policy $\pi_\theta$ via offline constrained policy optimization (CPO) \cite{achiam2017constrained}. Such training employs a simulated network environment with the following components: 
+\begin{itemize}[leftmargin=*,noitemsep]
+\item \textit{State}: $s_t = \left( \{ \Gamma_e^{\text{data}}/C_e \}, \{q_e^t\}, \{\Gamma_p^{\text{total}}\} \right)$.
+\item \textit{Action}: (1) paths in $\{\mathcal{P}_{p,c}\}$, and (2) splitting ratios $\pi_{p,c}$.
+\item \textit{Reward}: $r_t = -\sum_{e \in E} q_e^t - \eta \cdot \mathbb{I}_{\text{violation}}$, where $-\sum_{e \in E} q_e^t$ encourages RL to minimize network congestion, and $\eta \cdot \mathbb{I}_{\text{violation}}$ penalizes constraint violations: $\eta$ is a large penalty weight (e.g., $10^6$) and $\mathbb{I}_{\text{violation}}=1$ if $\Gamma_e^{\text{data}} + \Gamma_e^{\text{meas}} > \tau C_e \text{ for any } e$. 
 \end{itemize}
-This ensures $\sum_{c} \pi_{p,c} \Gamma_p^{\text{total}} \leq C_e - \text{data\_traffic}_e$ $\forall e$, preventing saturation while adapting to traffic dynamics.
+
+\noindent With these components, \sysname maximizes $r_t$ while satisfying Eq.15 via Lagrangian relaxation. After $O(10^5)$ training steps with real traffic traces (e.g., CAIDA), $\pi_\theta$ is converged and is deployed for online inference.
+
+\begin{algorithm}[t]
+\caption{Congestion-free path selection}
+\begin{algorithmic}[1]
+\Require Trained policy network $\pi_\theta$, network $G$, 
+         control plane nodes in $C$, programmable switches in $P$, 
+         worst-case rates $\{\Gamma_p^{\text{total}}\}_{p \in P}$, 
+         safety threshold $\tau$
+\Ensure Selected paths in $\{\mathcal{P}_{p,c}\}$ and splitting ratios in $\{\pi_{p,c}\}$
+
+\State Initialize $\{\mathcal{P}_{p,c}\} \gets \textsc{k-ShortestPaths}(G, P, C)$ %\Comment{Multiple path options}
+\State Initialize $\pi_{p,c} \gets \frac{1}{|C|}$ \Comment{{\color{aogreen}Uniform initial splitting}}
+
+\Loop \Comment{{\color{aogreen}At each time step $t$}}
+  \State Collect $\Gamma_e^{\text{data}}$ and $q_e^t$
+  \State Build state $s_t \gets \left( \{ \frac{\Gamma_e^{\text{data}}}{C_e} \}, \{q_e^t\}, \{\Gamma_p^{\text{total}}\} \right)$
+  \State Get action $a_t \gets \pi_\theta(s_t)$ and yield $(\{\mathcal{P}_{p,c}\}, \{\pi_{p,c}\})$ 
+  \State Compute $\Gamma_e^{\text{meas}} \gets \sum_{p} \sum_{c} \pi_{p,c} \cdot \Gamma_p^{\text{total}} \cdot \mathbb{I}_{e \in \mathcal{P}_{p,c}}$
+  \State $\pi_{p,c} \gets \pi_{p,c} \cdot \min\left(1, \frac{\tau C_e - \Gamma_e^{\text{data}}}{\Gamma_e^{\text{meas}} + \epsilon}\right)$ for $e \in \mathcal{P}_{p,c}$
+  \State $\pi_{p,c} \gets \frac{\pi_{p,c}}{\sum_c \pi_{p,c}} \quad \forall p \in P$ \Comment{{\color{aogreen}Normalization}}
+  \State Deploy $\mathcal{P}_{p,c}$ and $\pi_{p,c}$ on switches
+\EndLoop
+\end{algorithmic}
+\end{algorithm}
+
+With $\pi_\theta$, \sysname creates a RL framework in Algorithm~3. Initially (lines~1-2), it precomputes $k$ candidate paths in $\{\mathcal{P}_{p,c}\}$ between all $p$-$c$ pairs and initializes uniform splitting ratios, i.e., $\pi_{p,c} = 1/|C|$. At each timestep $t$ (loop in line~3), $q_e^t$ and $\Gamma_e^{\text{data}}$ are collected and transformed into state $s_t$ (lines~4-5). Then the RL policy $\pi_\theta$ yields path selections and raw splitting ratios (line~6). 
+After computing $\Gamma_e^{\text{meas}}$ via Eq.16 (line~7), \sysname enforces bandwidth constraints via scaling and normalization (lines~8-9). 
+Finally, selected paths $\mathcal{P}_{p,c}$ and splitting ratios $\pi_{p,c}$ are deployed onto data plane switches, e.g., via rule installation (line~10). In short, this algorithm dynamically optimizes path utilization to prevent congestion during measurement data collection.
+
+%ArchMon employs a reinforcement learning (RL) framework to dynamically select (1) \textit{which paths} and (2) \textit{split ratios} for transferring measurement data from programmable switches ($p \in P \subseteq V$) to control plane nodes ($c \in C \subseteq V$) without congestion. The algorithm takes four key inputs (Line 1): (1) a \textit{trained policy network} $\pi_\theta$ (obtained via offline CPO training) that jointly outputs path selections $\mathcal{P}_{p,c}$ and splitting ratios $\pi_{p,c}$, (2) network topology $G = (V, E)$, (3) fixed worst-case rates $\{\Gamma_p^{\text{total}}\}_{p \in P}$, and (4) safety threshold $\tau$. 
+
