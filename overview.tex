@@ -90,11 +90,15 @@ $L(\boldsymbol{\lambda})$ & Lagrangian dual function \\
 $\beta_p$ & Switch penalty = $\sum_{f \in \mathcal{F}_p} \lambda_f$ \\
 $\gamma_p$ & Data collection distance cost = $(1-\alpha) \min_{c \in C} \delta(p,c)$ \\
 $g_f$ & Subgradient = $\sum_{p \in \mathcal{P}_f} u_p - w_f$ \\
-% \hline
-% $d_p$ & Flow-switch incidence degree: $|\mathcal{F}_p|$ \\
-% $d_{\max}$ & Maximum incidence: $\max_{p \in P} |\mathcal{F}_p|$ \\
-% $s_{\max}$ & Maximum path switches: $\max_{f \in \mathcal{F}} |\mathcal{P}_f|$ \\
 $T$ & Iteration count in subgradient optimization \\
+$\pi_\theta$ & Trained RL policy network \\
+$\mathcal{P}_{p,c}$ & Selected network path from switch $p$ to control plane node $c$ \\
+$\pi_{p,c}$ & Fraction of measurement data traffic from $p$ to $c$ \\
+$q_e^t$ & Queue depth (bytes) on link $e$ at time $t$ \\
+$\Gamma_p^{\text{total}}$ & Worst-case measurement data rate (bps) at switch $p$ \\
+$\Gamma_e^{\text{data}}$ & Normal data plane traffic rate (bps) on link $e$ \\
+$\tau_e$ & Safety threshold for congestion avoidance on link $e$ \\
+$s_t$ & State vector at time $t$ for RL policy \\
 $x_p$ & 0-1 variable = 1 if sketch deployed at switch $p$ \\
 $y_p$ & 0-1 variable = 1 if INT deployed at switch $p$ \\
 $u_p$ & 0-1 variable = 1 if switch $p$ is selected ($x_p=1 \lor y_p=1$) \\
@@ -430,5 +434,39 @@ With $\pi_\theta$, \sysname creates a RL framework in Algorithm~3. Initially (li
 After computing $\Gamma_e^{\text{meas}}$ via Eq.16 (line~7), \sysname enforces bandwidth constraints via scaling and normalization (lines~8-9). 
 Finally, selected paths $\mathcal{P}_{p,c}$ and splitting ratios $\pi_{p,c}$ are deployed onto data plane switches, e.g., via rule installation (line~10). In short, this algorithm dynamically optimizes path utilization to prevent congestion during measurement data collection.
 
-%ArchMon employs a reinforcement learning (RL) framework to dynamically select (1) \textit{which paths} and (2) \textit{split ratios} for transferring measurement data from programmable switches ($p \in P \subseteq V$) to control plane nodes ($c \in C \subseteq V$) without congestion. The algorithm takes four key inputs (Line 1): (1) a \textit{trained policy network} $\pi_\theta$ (obtained via offline CPO training) that jointly outputs path selections $\mathcal{P}_{p,c}$ and splitting ratios $\pi_{p,c}$, (2) network topology $G = (V, E)$, (3) fixed worst-case rates $\{\Gamma_p^{\text{total}}\}_{p \in P}$, and (4) safety threshold $\tau$. 
+%Andante employs a reinforcement learning (RL) framework to dynamically select (1) \textit{which paths} and (2) \textit{split ratios} for transferring measurement data from programmable switches ($p \in P \subseteq V$) to control plane nodes ($c \in C \subseteq V$) without congestion. The algorithm takes four key inputs (Line 1): (1) a \textit{trained policy network} $\pi_\theta$ (obtained via offline CPO training) that jointly outputs path selections $\mathcal{P}_{p,c}$ and splitting ratios $\pi_{p,c}$, (2) network topology $G = (V, E)$, (3) fixed worst-case rates $\{\Gamma_p^{\text{total}}\}_{p \in P}$, and (4) safety threshold $\tau$. 
+
+\section{Example of \sysname}
+
+We present a simple example to explain how \sysname works. 
+
+\para{Settings}. We consider a network comprising a triangle of three programmable switches, $p_1$, $p_2$, $p_3$. All links are 10-Gbps. The control plane is directly connected to $p_2$. Five flows traverse the network: a video flow $f_1$ with the OD pair of ($p_1$,$p_2$), a RPC flow $f_2$ with the OD pair of ($p_1$,$p_3$), a database flow $f_3$ with the OD pair of ($p_2$,$p_3$), an IoT flow $f_4$ with the OD pair of ($p_3$,$p_1$), and a backup flow $f_5$ with the OD pair of ($p_3$,$p_2$). $f_1$, $f_3$, and $f_5$ are large flows while small flows are $f_2$ and $f_4$. The safety threshold $\tau$ is 0.8 of link capacity. 
+
+\para{Measurement point selection}. \sysname selects $p_2$ to deploy sketches. For large flows, $p_2$ covers all large flows, minimizing resource usage and data collection distance. For small flows, $p_1$ monitors $f_2$ while S3 monitors $f_4$. This decision achieves 100\% coverage while reducing the number of activated switches by 33\% compared to full INT deployment. 
+
+%Thus, it balancing the tradeoff between coverage efficiency and proximity constraints through penalty weight optimization.
+
+\para{Measurement data collection}. Consider the state $s_t$: (1) link utilizations: $p_1\leftrightarrow p_3=20$\%, $p_2\leftrightarrow p_3=70$\%, $p_1\leftrightarrow p_2=20$\%; (2) queue depths: 40\,KB in each switch; (3) worst-case measurement data rates: $\Gamma_{p_1}^{\text{total}}=3$\,Gbps, $\Gamma_{p_2}^{\text{total}}=1$\,Gbps, and $\Gamma_{p_3}^{\text{total}}=2$\,Gbps. The RL policy $\pi_{\theta}$ in \sysname decides to (1) deliver 100\% $p_1$'s INT data using the path $p_1\leftrightarrow p_2$, and (2) deliver 100\% $p_3$'s INT data using the path $p_3\rightarrow p_1\rightarrow p_2$. Otherwise, if $p_3$ sends INT data to $p_2$, the link $p_2\leftrightarrow p_3$ suffers from the load of 8\,Gbps, which violates the safety threshold $\tau$: $\Gamma_{p_3}^{\text{total}}+70$\%$\times 10$\,Gbps$=9$\,Gbps $> \tau\times 10$\,Gbps$=8$\,Gbps. This also avoids congesting other paths, e.g., for the path $p_1 \leftrightarrow p_2$, $\Gamma_{p_1}^{\text{total}}+\Gamma_{p_3}^{\text{total}}+20$\%$\times 10$\,Gbps$=7$\,Gbps $< \tau\times 10$\,Gbps$=8$\,Gbps, preserving the safety threshold and avoid data loss. 
+
+% Queue depths: S1→S3=120 KB (congested), others=40 KB
+
+% Worst-case rates: Γ<sub>S1</sub><sup>total</sup>=0.3 Gbps (INT for F2), Γ<sub>S3</sub><sup>total</sup>=0.15 Gbps (INT for F4)
+% RL policy $\pi_θ$ outputs:
+
+% Divert 70\% of S1's INT data through S1→S2→S3 (avoiding congested S1→S3)
+
+% Route 100\% of S3's INT data via S3→S2 (direct path underutilized)
+% Congestion safeguard scales ratios to ensure:
+
+% S1→S2: 60\% + (0.3×0.7×10\%)=62.1\% < 80\%
+
+% S3→S2: 82% + 1.5%=83.5% → over threshold! → dynamically reroutes 30% to S3→S1→S2
+% Final deployment achieves zero packet loss with 43 μs INT latency.
+
+%Consider that the current link utilizations: S1$\rightarrow$S2=65\%, S2$\rightarrow$S3=72\%, S3$\rightarrow$S2=60\%; queue depths are 50\,KB; and the worst-case measurement data rates: 0.5\,Gbps from S1, 7\,Gbps from S2, and 0.3\,Gbps from S3. The decisions of \sysname are: 100\% of S1's INT data (measuring $f_2$) and S3's INT data (measuring $f_4$) are transferred through the path S1$\rightarrow$S2 and the path S3$\rightarrow$S2, respectively. Therefore, none of links will exceed the safety threshold.  
+
+%The RL policy processes real-time telemetry (link utilizations: S1→S2=65\%, S2→S3=72\%, S3→S2=60\%; queue depths: 50\,KB uniform) and worst-case measurement rates (S1:0.5Gbps, S2:7Gbps, S3:0.3Gbps). It outputs direct-path routing: 100\% of S1's INT data (F2) and S3's INT data (F4) through S1→S2 and S3→S2 respectively. The congestion safeguard validates projected utilization (S1→S2: 65\% + 5\% = 70\% $<$ 80\% threshold; S3→S2: 60\% + 3\% = 63\% $<$ 80\%), confirming loss-free transmission without scaling. P4 flow rules enforce these paths dynamically during traffic spikes.
+
+
+
 

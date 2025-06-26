@@ -1,0 +1,45 @@
+\section{Evaluation}
+
+In this section, we perform testbed experiments to evaluate \sysname. We highlight our findings as follows.
+
+\begin{itemize}[leftmargin=*]
+%
+    \item \sysname provides at least $3.3\times$ higher accuracy to various network management applications. 
+%
+    \item Compared to standalone sketches, \sysname achieves at least $3.3\times$ higher accuracy when measuring small flows.
+%
+    \item Compared to INT techniques, \sysname reduces at least $3.3\times$ overheads in network bandwidth and control plane resources. 
+%
+    \item \sysname offers the near-optimal measurement point selection that improves the flow coverage by $3.7\times \sim 3.8\times$ and reduces the distance between switches and control plane nodes by $3.7\times \sim 3.8\times$ when compared to strawman approaches such as heuristics. It also maintains timeliness that quickly yields decisions within a few milliseconds. 
+%
+    \item \sysname eliminates network congestion via its loss-free measurement data collection. Its dynamic path selection prevents high link utilization in all cases, while existing solutions fail to avoid data loss when dynamics occur. 
+%
+\end{itemize}
+
+\subsection{Experimental Setup}
+
+\para{Implementation}. Our implementation comprises optimization algorithms and a controller. For the optimization algorithms, we implement the Lagrangian relaxation algorithms for measurement point selection (\S\ref{selection}) in C++ using the Gurobi API \cite{gurobi}. The RL algorithm for congestion-free data collection (\S\ref{collection}) is implemented using PyTorch with the CPO library \cite{pytorch}. Next, we implement a controller in Python that translates optimization outputs (i.e., \(x_p\), \(y_p\), \(z_{p,c}\) variables) into switch configurations. Specifically, it configures: (1) sketch deployment and INT activation on selected switches via data plane program deployment \cite{chen2020speed,gao2020lyra}, and (2) flow routing rules inside match-action tables to direct small flows through INT-enabled switches. The controller uses the Tofino SDE \cite{tofino2} to load configurations on switches.
+
+\para{Testbed and simulator}. We construct a real testbed comprising six \(64 \times 400\)\,Gbps Tofino2 programmable switches \cite{tofino2}. These switches are interconnected in a two-level fat-tree topology via 100-Gbps links. Also, at the network edge, we establish a cluster of high-performance servers, each offering 36-core Intel Xeon Gold 6240C 2.60\,GHz CPU and 128-GB RAM, as the control plane. For traffic generation, we connect eight servers that runs PktGen-DPDK \cite{pktgen} at line rate to the network. Next, due to limited testbed scale, we implement a C++ simulator to simulate large-scale topologies that models: (1) switch pipelines with resource constraints \cite{jose2015compiling}, (2) link bandwidths and latency, and (3) switch and control-plane performance statistics based on real-world measurements. The simulator accepts real traffic traces such as CAIDA \cite{caida} and topology files as input.
+
+\para{Topologies and workloads}. We consider two typical classes of topologies \cite{anup2022hetero,chen2024eagle}. (1) Wide-area networks (WANs). We select five WANs, AboveNet (20 switches), Internet2 (42 switches), ForthNet (62 switches), Bestel (83 switches), and Interroute (109 switches), from the Internet topology zoo \cite{knight2011internet}. We denote these topologies with T1-T5. We set the transmission latency of each link to be randomly distributed between 10\,ms to 50\,ms while setting all switches to be programmable. (2) Data center networks (DCNs). For DCNs, we consider the fat-tree networks and vary the pod number: C1-C5 that use 16, 20, 24, 32, and 48 pods, respectively, e.g., C5 has 2880 switches and 55296 links. We set the link latency to be randomly varied between 1\,$\mu$s to 10\,$\mu$s. We randomly pick 30\% of switches to be programmable based on recent statistics \cite{telecom}. For each programmable switch, we set its configurations based on Tofino switches \cite{jose2015compiling}.
+
+We choose corresponding workloads that match WANs and DCNs. For WANs, we choose a CAIDA trace \cite{caida} that lasts for one minute and comprises around 26\,M packets. For DCNs, we use the complete IMC DCN traffic trace \cite{benson2010network}. 
+
+\para{Applications}. We consider three types of network management applications, (1) volumetric applications, i.e., heavy hitter detection (HH) \cite{huang2017sketchvisor}, superspreader detection (SS) \cite{tang2019mv}, and DDoS flow detection (DF) \cite{liu2021jaqen}, (2) aggregated applications, i.e., entropy estimation (EE) \cite{liu2016one}, and (3) troubleshooting applications, i.e., path monitoring (PM) \cite{ben2020pint,sheng2021deltaint}. 
+
+According to the literature, we set the thresholds of HH to 10K packets and set the threshold of SS to 0.5\% of the total number of IP addresses. Also, for EE, we compute the entropy of measured flow distributions based on \cite{liu2016one}. 
+
+\para{Metrics}. We use the precision, \emph{tp}/(\emph{tp}+\emph{fp}), the recall, \emph{tp}/(\emph{tp}+\emph{fn}), and the F1 score, 2\emph{tp}/(2\emph{tp}+\emph{fp}+\emph{fn}), where \emph{tp}, \emph{fp}, and \emph{fn} denote the number of true positives, false positives, and false negatives. 
+
+%We realize them with CM, CS, ES, FR, HP, and UM, respectively. We realize EE with FR, MARC, and UM, respectively.
+
+\para{Comparison solutions}. Sketches + INT techniques. 
+
+
+\subsection{Benefits of \sysname}
+
+
+\subsection{Microbenchmarks}
+
+

@@ -26,7 +26,7 @@ We summarize our contributions as follows.
 %
     \item According to analysis results, combining sketches and INT presents an opportunity of realizing both high accuracy and resource efficiency simultaneously. We exploit this opportunity by proposing \sysname, a framework that uses sketches to measure large flows while invoking INT for small flows, enabling accurate and resource-efficient measurements (\S\ref{overview}). 
 %
-    \item However, co-designing sketches and INT faces the challenges of \emph{where} to deploy them and \emph{how} to collect measurement data. \sysname adopts two optimizations, i.e., near-optimal measurement point selection, and congestion-free measurement data collection to handle these challenges (\S\ref{selection}-\S\ref{collection}). 
+    \item However, co-designing sketches and INT faces the challenges of \emph{where} to deploy them and \emph{how} to collect measurement data. \sysname provides two optimizations, i.e., near-optimal measurement point selection, and congestion-free measurement data collection to handle these challenges (\S\ref{selection}-\S\ref{collection}). 
     % resource-efficient measurement data reduction, as well as
 %
     \item We implement \sysname on our testbed that comprises $64\times 400$\,Gbps Tofino2 switches \cite{tofino2}. Testbed experiments indicate that \sysname outperforms existing standalone sketches or INT techniques with accuracy improvement (e.g., $3\times$ F1 scores) and orders-of-magnitude lower overheads. 
