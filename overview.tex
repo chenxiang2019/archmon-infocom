@@ -142,7 +142,7 @@ $w_f$ & 0-1 variable = 1 if flow $f$ is covered (i.e., measured) \\
 (3) control plane nodes $C \subseteq V$;
 (4) a set $\mathcal{F}$ of flows, where each flow $f \in \mathcal{F}$ only indicates an OD pair $(o_f, d_f)$ \cite{liu2016one,anup2022hetero}, where $o_f$ and $d_f$ are the ingress and egress of $f$, respectively; 
 (5) for each flow $f$, the set $\mathcal{P}_f \subseteq P$ of switches on \emph{any shortest path} between $o_f$ and $d_f$;
-and (6) the distance metric $\delta: V \times C \to \mathbb{R}^+$ (e.g., hop count).
+and (6) the distance metric $\delta: V \times C \to \mathbb{R}^+$ (e.g., hop count between meaurement points and control plane).
 
 \para{Output.} The output comprises:
 (1) $x_p \in \{0,1\}$ $\forall p \in P$: $x_p=1$ if sketch deployed at switch $p$;
@@ -156,26 +156,22 @@ and (5) $w_f \in \{0,1\}$ $\forall f \in \mathcal{F}$: $w_f=1$ if flow $f$ is co
 \min\ -\alpha \sum_{f \in \mathcal{F}} w_f + (1-\alpha) \sum_{\substack{p \in P \\ c \in C}} z_{p,c} \cdot \delta(p, c)
 \label{eq:objective}
 \end{equation}
-where the user-configurable parameter $\alpha \in [0,1]$ balances the objective of maximizing coverage and that of minimizing the distances between selected switches and control plane nodes.
+where the user-configurable parameter $\alpha \in [0,1]$ balances the objective of maximizing coverage and that of minimizing the distances between selected switches and control plane nodes. 
 
 \para{Constraints.} The problem has the following major constraints: Eq.2-4 bound the number of selected switches; Eq.5 presents that when a flow $f$ is covered, at least one switch on the shortest paths that connect the OD pair of $f$ should be selected; Eq.6 shows that each selected switch should send data to a control plane node; and Eq.7 limits decision variables. 
 
 \vspace{-7pt}
 {\footnotesize
 \begin{align}
-u_p &\geq x_p \quad \forall p \in P \\
-u_p &\geq y_p \quad \forall p \in P \\
-u_p &\leq x_p + y_p \quad \forall p \in P 
-\end{align}
-\begin{equation}
-    w_f \leq \sum_{p \in \mathcal{P}_f} u_p \quad \forall f \in \mathcal{F}
-\end{equation}
-\begin{equation}
-    \sum_{c \in C} z_{p,c} = u_p \quad \forall p \in P
-\end{equation}
-\begin{equation}
-    x_p, y_p, u_p, w_f, z_{p,c} \in \{0,1\}
-\end{equation}}
+\text{Selected switch number: } &u_p \geq x_p \quad \forall p \in P \\
+&u_p \geq y_p \quad \forall p \in P \\
+&u_p \leq x_p + y_p \quad \forall p \in P \\
+\text{Coverage: } &w_f \leq \sum_{p \in \mathcal{P}_f} u_p \quad \forall f \in \mathcal{F} \\
+\text{Data collection: } &\sum_{c \in C} z_{p,c} = u_p \quad \forall p \in P \\
+\text{0-1 decisions: } &x_p, y_p, u_p, w_f, z_{p,c} \in \{0,1\}
+\end{align}}
+
+There also exist other objectives, e.g., maximizing the number of covered switches or the number of covered links. While our focus is flow coverage, supporting other objectives is still simple, i.e., replacing Eq.1 with user-specified objectives. 
 
 \para{Hardness}. This measurement point selection problem is NP-hard. First, according to its dual combinatorial structures, this problem reduces to the set cover problem: each programmable switch $p \in P$ corresponds to the set $S_p = \{ f \in \mathcal{F} \mid p \in \mathcal{P}_f \}$ covering the flows possibly traversing $p$. This step establishes a set system with the universe $U = \mathcal{F}$ and collection $\mathcal{S} = \{ S_p \}$, where maximizing coverage $\sum w_f$ equals minimizing uncovered flows (i.e., a standard NP-hard set cover problem). Second, the objective of minimizing distances, i.e., $\sum z_{p,c} \delta(p,c)$, forms an uncapacitated facility location subproblem, in which selected switches, i.e., $u_p=1$, are facilities, control plane nodes in $C$ are clients, and $\delta(p,c)$ are assignment costs. 
 
