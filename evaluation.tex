@@ -35,7 +35,7 @@ According to the literature, we set the thresholds of HH to 10K packets and set 
 
 %We realize them with CM, CS, ES, FR, HP, and UM, respectively. We realize EE with FR, MARC, and UM, respectively.
 
-\para{Baselines}. We compare \sysname with four types of techniques. 
+\para{Baselines}. We compare \sysname with five types of techniques. 
 
 \begin{itemize}[leftmargin=*]
 %
@@ -43,13 +43,16 @@ According to the literature, we set the thresholds of HH to 10K packets and set 
 %
     \item[2] \textbf{INT only}. We consider three classic INT techniques, including the original INT \cite{int}, PINT \cite{ben2020pint}, and DeltaINT \cite{sheng2021deltaint}. We implement them based on their open-source implementations. % int, pint (sampling rate = 0.X), deltaint (see paper)
 %
-    \item[3] \textbf{Measurement point selection algorithms}. We choose three algorithms for selecting measurement points, i.e., MTP \cite{chen2021mtp} that aims to minimize the number of occupied measurement points to place sketches and INT, SPEED \cite{chen2020speed} that optimizes both resources and performance, and a Greedy-based heuristic that prioritizes the switches with more resources. 
+    \item[3] \textbf{Hybrid sketch+INT}. Recall from \S\ref{hybrid}, we implement the open-source SketchINT \cite{yang2023sketchint} and LightGuardian \cite{zhao2021lightguardian}. 
 %
-    \item[4] \textbf{Data collection path selection algorithms}. We use three algorithms for selecting the paths of transferring measurement data, i.e., Escala \cite{liu2022escala} that selects the paths with lower latency, a randomized algorithm that randomly chooses its paths, and INT-path \cite{pan2019int} that adopts a depth-first search (DFS) heuristic to cover as many measurement points as possible.
+    \item[4] \textbf{Measurement point selection algorithms}. We choose three algorithms for selecting measurement points, i.e., MTP \cite{chen2021mtp} that aims to minimize the number of occupied measurement points to place sketches and INT, SPEED \cite{chen2020speed} that optimizes both resources and performance, and a Greedy-based heuristic that prioritizes the switches with more resources. 
+%
+    \item[5] \textbf{Data collection path selection algorithms}. We use three algorithms for selecting the paths of transferring measurement data, i.e., Escala \cite{liu2022escala} that selects the paths with lower latency, a randomized algorithm that randomly chooses its paths, and INT-path \cite{pan2019int} that adopts a depth-first search (DFS) heuristic to cover as many measurement points as possible.
 %
 \end{itemize}
 
-For a fair comparison, we set the first two types of techniques to select the same measurement points and paths chosen by the algorithms of \sysname. We fix the amount of switch memory allocated to each sketch or INT to 10\,MB, which is close to the maximum capacity of a switch \cite{gupta2018sonata}. Moreover, to quantify the solution quality of the last two types of techniques, we also use Gurobi \cite{gurobi} to find the optimal decisions (i.e., OPT). 
+For a fair comparison, we set the top three types of techniques to select the same measurement points and paths chosen by the algorithms of \sysname. We fix the amount of switch memory allocated to each sketch or INT to 10\,MB, which is close to the maximum capacity of a switch \cite{gupta2018sonata}. 
+Moreover, to quantify the solution quality of the last two types of techniques, we also use Gurobi \cite{gurobi} to find the optimal decisions (i.e., OPT). 
 
 \subsection{Benefits of \sysname}
 
