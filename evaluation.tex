@@ -1,14 +1,10 @@
-\section{Evaluation}
+\section{Evaluation}\label{eval}
 
 In this section, we perform testbed experiments to evaluate \sysname. We highlight our findings as follows.
 
 \begin{itemize}[leftmargin=*]
 %
-    \item \sysname provides at least $3.3\times$ higher accuracy to various network management applications. 
-%
-    \item Compared to standalone sketches, \sysname achieves at least $3.3\times$ higher accuracy when measuring small flows.
-%
-    \item Compared to INT techniques, \sysname reduces at least $3.3\times$ overheads in network bandwidth and control plane resources. 
+    \item Compared to a wide spectrum of baselines, \sysname provides $3.3\times$ higher accuracy to various applications. Compared to sketch-only baselines, \sysname achieves at least $3.3\times$ higher accuracy when measuring small flows. Compared to INT-only baselines, \sysname reduces at least $3.3\times$ overheads in network bandwidth and control plane resources. Compared to hybrid baselines, \sysname improves accuracy by 3.3$\times$. 
 %
     \item \sysname offers the near-optimal measurement point selection that improves the flow coverage by $3.7\times \sim 3.8\times$ and reduces the distance between switches and control plane nodes by $3.7\times \sim 3.8\times$ when compared to strawman approaches such as heuristics. It also maintains timeliness that quickly yields decisions within a few milliseconds. 
 %
@@ -28,10 +24,6 @@ For control plane nodes, we leverage two distinct strategies for WANs and DCNs, 
 
 We choose corresponding workloads that match WANs and DCNs. For WANs, we choose a CAIDA trace \cite{caida} that lasts for one minute and comprises around 26\,M packets. For DCNs, we use the complete IMC DCN traffic trace \cite{benson2010network}. Each flow's OD pair is randomly selected among edge switches. 
 
-\para{Applications}. We consider three types of network management applications, (1) volumetric applications, i.e., heavy hitter detection (HH) \cite{huang2017sketchvisor}, superspreader detection (SS) \cite{tang2019mv}, and DDoS flow detection (DF) \cite{liu2021jaqen}, (2) aggregated applications, i.e., entropy estimation (EE) \cite{liu2016one}, and (3) troubleshooting applications, i.e., path monitoring (PM) \cite{ben2020pint,sheng2021deltaint}. 
-According to the literature, we set the thresholds of HH to 10K packets and set the threshold of SS to 0.5\% of the total number of IP addresses. Also, for EE, we compute the entropy of measured flow distributions based on \cite{liu2016one}. These applications run on the control plane, which installs an instance on each server to collectively handle input data. 
-
-\para{Metrics}. We use the precision, \emph{tp}/(\emph{tp}+\emph{fp}), the recall, \emph{tp}/(\emph{tp}+\emph{fn}), and the F1 score, 2\emph{tp}/(2\emph{tp}+\emph{fp}+\emph{fn}), where \emph{tp}, \emph{fp}, and \emph{fn} denote the number of true positives, false positives, and false negatives. 
 
 %We realize them with CM, CS, ES, FR, HP, and UM, respectively. We realize EE with FR, MARC, and UM, respectively.
 
@@ -54,30 +46,68 @@ According to the literature, we set the thresholds of HH to 10K packets and set 
 For a fair comparison, we set the top three types of techniques to select the same measurement points and paths chosen by the algorithms of \sysname. We fix the amount of switch memory allocated to each sketch or INT to 10\,MB, which is close to the maximum capacity of a switch \cite{gupta2018sonata}. 
 Moreover, to quantify the solution quality of the last two types of techniques, we also use Gurobi \cite{gurobi} to find the optimal decisions (i.e., OPT). 
 
-\subsection{Benefits of \sysname}
+\para{Applications}. We consider three types of network management applications based on their differences on queries.
 
-\para{\sysname can improve application-level accuracy by $3.3\times$}. In our testbed, we leverage \sysname, sketches-only, and INT-only solutions to measure traffic, respectively. We continuously replay CAIDA traces \cite{caida} to our testbed and configure the OD pair of each flow to random edge switches. In the control plane, we run the applications in \S\ref{setup} to identify the flows of their interest based on collected data. We compute their accuracy by comparing their identified flows with the ground true, which is obtained by direcly analyzing the input traces. 
+%(1) volumetric applications, i.e., heavy hitter detection (HH) \cite{huang2017sketchvisor}, superspreader detection (SS) \cite{tang2019mv}, DDoS flow detection (DF) \cite{liu2021jaqen}, and per-flow packet counting (PC) (2) aggregated applications, i.e., entropy estimation (EE) \cite{liu2016one}, and (3) troubleshooting applications, i.e., path monitoring (PM) \cite{ben2020pint,sheng2021deltaint}. According to the literature, we set the thresholds of HH to 10K packets and set the threshold of SS to 0.5\% of the total number of IP addresses. Also, for EE, we compute the entropy of measured flow distributions based on \cite{liu2016one}. These applications run on the control plane, which installs an instance on each server to collectively handle input data. 
+
+% \noindent With the above terms, we classify network management applications into three classes based on their differences on queries.
+
+\begin{itemize}[leftmargin=*]
+%
+    \item Volumetric applications include heavy hitter detection (HH) \cite{huang2017sketchvisor}, superspreader detection (SS) \cite{tang2019mv}, DDoS flow detection (DF) \cite{liu2021jaqen}, and per-flow packet counting (PC) \cite{huang2017sketchvisor} and query the size of each flow. 
+%
+    \item Aggregated applications include entropy estimation (EE) \cite{liu2016one} and flow size distribution (FD) \cite{chen2021mtp} that aggregate statistics to summarize all flows. %For FD, we set the flow identifier to two-tuple and five-tuple, respectively.
+%
+    \item Troubleshooting applications, e.g., latency monitoring (LM) and congestion control (CC) \cite{ben2020pint,sheng2021deltaint}, query per-flow metadata (i.e., timestamps and queue lengths).
+%
+\end{itemize}
+
+\noindent According to their differences, we use different baselines: (1) Volumetric applications focus on large flows while aggregated applications consider all flows. As such, we compare \sysname with sketches-only, INT-only, and hybrid baselines. (2) Troubleshooting applications rely on INT data, such that we only compare \sysname with INT-only and hybrid baselines. For the solutions that combine both sketches and INT, we use the sketch that yields the best results for a fair comparison. 
+
+\para{Metrics}. We use the precision, \emph{tp}/(\emph{tp}+\emph{fp}), the recall, \emph{tp}/(\emph{tp}+\emph{fn}), and the F1 score, 2\emph{tp}/(2\emph{tp}+\emph{fp}+\emph{fn}), where \emph{tp}, \emph{fp}, and \emph{fn} denote the number of true positives, false positives, and false negatives. 
+
+\subsection{Application-Level Benefits of \sysname}
+
+\para{\sysname brings accuracy and efficiency benefits to diverse applications}. 
+In our testbed, we use \sysname and baselines to measure traffic, respectively. We continuously replay CAIDA traces \cite{caida} to our testbed and set the OD pair of each flow to random edge switches. The control plane runs the applications in \S\ref{setup} to identify the flows of their interest based on collected data. We compute the accuracy by comparing measured data with the ground truth obtained by analyzing input traces. 
 
 % figure a-e: x = f1 + recall + precision, y = ratio (%), lines = monplan, sketch (cm,cs,...), int, pint, deltaint
 % trace: caida 2018
 % figure a = HH, figure b = SS, figure c = DF, figure d = EE, figure e = PM
 % each figure occupies a complete line
 
-In Figure~4, we observe that \sysname achieves $3.3\times$ higher accuracy. This advantage originates from co-designing sketches and INT: sketches enable accurate measurement for large flows while INT mitigate the errors of measuring small flows, while using only sketches or INT alone drops accuracy: small flows in sketches suffer from hash collisions with large flows, while direct INT brings congestion and data loss. 
+\noindent \emph{(1) Evaluation with volumetric applications}
 
-\para{\sysname improves accuracy by $3.3\times$ for small flows}. Next, we fix the threshold of distinguishing large and small flows to 10K packets and quantify the errors of measuring small flows. In Figure~5, \sysname achieves near-optimal accuracy because it employs fully accurate INT for small flows, which outperforms existing sketches by $3.3\times$.  
+According to the literature, we set the thresholds of HH to 10K packets, set the threshold of SS to 0.5\% of the total number of IP addresses, and set the threshold of DF to 0.5\% of the total number of five-tuples. PC considers per-flow packet counts. 
+
+For HH, SS, DF, in Figure~4, \sysname achieves $3.3\times$ higher accuracy. This advantage originates from co-designing sketches and INT: sketches enable accurate measurement for large flows while INT mitigate the errors of measuring small flows, while using only sketches or INT alone drops accuracy: small flows in sketches suffer from hash collisions with large flows, while direct INT brings congestion and data loss. 
+
+%Next, we fix the threshold of distinguishing large and small flows to 10K packets and quantify the errors of measuring small flows. 
+For PC, in Figure~5, \sysname achieves near-optimal accuracy because it employs fully accurate INT for small flows, which outperforms existing sketches by $3.3\times$.  
 
 % figure a: x = sketches, y = f1, lines = monplan, sketches-only
 % figure b: x = sketches, y = recall, lines = monplan, sketches-only
 % trace: small flows in caida 2019=8
 % each figure occupies a half line (two figures per line)
 
-\para{\sysname maintains low measurement overheads}. Figure~6 presents the overheads of \sysname when transfering measurement data to the control plane. Compared with INT, \sysname reduces the rate of transferring data by two orders of magnitude when we manually increase incoming traffic rate from 200\,Gbps to 1\,Tbps. Such a benefit comes from our design that only small flows trigger INT, thus limiting overheads and avoids data loss. 
+Figure~6 presents the overheads of \sysname when transfering data to the control plane. Compared with INT, \sysname reduces the rate of transferring data by two orders of magnitude when we manually increase traffic rate from 200\,Gbps to 1\,Tbps. Such a benefit comes from our design that only small flows trigger INT, thus limiting overheads and avoids data loss. 
 
 % figure a (see excalibur paper): x = 100Gbps - 1Tbps, y = INT rate, lines = monplan, int, pint, deltaint 
 % figure b: x = 100Gbps - 1Tbps, y = loss rate, lines = monplan, int, pint, deltaint 
 % note: link 100 Gbps, estimate measurement data sending rate and compute loss rate
 % each figure occupies a half line (two figures per line)
+
+\noindent \emph{(2) Evaluation with aggregated applications}
+
+For EE, we only consider FR and UM since only those two sketch-only baselines support EE. Figure~7 shows that \sysname reduces its estimation errors and produces an entropy near the true one. Again, this improvement comes from the accuracy of measuring small flows via INT in \sysname. 
+
+For FD, we change the flow identifier to two-tuple and five-tuple, respectively. In Figure~8, \sysname produces near-optimal distributions because it well preserves the high accuracy of per-flow packet counts. In contrast, other baselines suffer from non-trivial accuracy loss due to the miss of small flows or data loss incurred by congestions during measurement data transmission. 
+
+\noindent \emph{(3) Evaluation with troubleshooting applications}
+
+For LM, 
+
+For CC, 
 
 \subsection{Microbenchmarks}
 

@@ -1,5 +1,12 @@
 \section{Overview of \sysname}\label{overview}
 
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{pics/overview.png}
+    \caption{MonPlan overview.}
+    \label{overview}
+\end{figure}
+
 \para{Goals}. We aim to achieve two goals of network measurement.
 
 \begin{itemize}[leftmargin=*]
@@ -28,7 +35,7 @@ However, while it is technically sound, leveraging these opportunities faces two
 %
 \end{itemize}
 
-\para{Design}. In response, we design \sysname, a framework that co-designs sketches and INT to collectively achieve high accuracy (\textbf{G1}) and resource efficiency (\textbf{G2}). To address the above challenges, \sysname embraces three-pronged system mechanisms. 
+\para{Design}. In response, we design \sysname, a framework that co-designs sketches and INT to collectively achieve high accuracy (\textbf{G1}) and resource efficiency (\textbf{G2}). To address the above challenges, \sysname embraces two-pronged system mechanisms. 
 
 \begin{itemize}[leftmargin=*]
 %
@@ -63,6 +70,7 @@ However, while it is technically sound, leveraging these opportunities faces two
 %\para{Step-by-step example}. 
 
 \section{Near-Optimal Measurement Point Selection}\label{selection}
+
 
 \para{Overview.} The measurement point selection problem aims to select programmable switches in the network to deploy sketches and INT. It has two objectives: (1) maximizing flow coverage, i.e., measuring as many flows as possible, and (2) minimizing the distance between the control plane and switches that execute network measurement to enable timely data collection.
 
@@ -177,6 +185,7 @@ There also exist other objectives, e.g., maximizing the number of covered switch
 
 To sum up, the joint objective in Eq.1 forms a multi-objective set cover with facility location costs. In particular, $\alpha$ modulates between flow coverage and resource efficiency: when $\alpha=1$, the problem is an NP-hard set cover problem; when $\alpha=0$, the problem is an NP-hard facility location problem.  
 
+
 \para{Solving}. Given the NP hardness, directly solving the problem using commercial MIP solvers such as Gurobi \cite{gurobi} and CPLEX \cite{cplex} inevitably suffers from excessively long execution time or fails to find possible solutions. In response, \sysname employs Lagrangian relaxation as follows.
 
 We relax the coverage constraints using Lagrange multipliers \(\lambda_f \geq 0\). The Lagrangian is:
@@ -214,15 +223,15 @@ subject to primal constraints in Eq.2-Eq.7.
 \State Initialize \(u_p = 0\), \(w_f = 0\) \(\forall p \in P, f \in \mathcal{F}\)
 \For{each switch \(p \in P\)}
   \State Compute \(\beta_p = \sum_{f: p \in \mathcal{P}_f} \lambda_f\) \Comment{{\color{aogreen}Aggregate flow penalties}}
-  \State Compute \(\gamma_p = (1-\alpha) \min_{c \in C} \delta(p, c)\) \Comment{{\color{aogreen}Min distance cost}}
-  \If{\(\beta_p + \gamma_p < 0\)} \Comment{{\color{aogreen}Negative reduced cost}}
+  \State Compute \(\gamma_p = (1-\alpha) \min_{c \in C} \delta(p, c)\) \Comment{{\color{aogreen}Minimize distance costs}}
+  \If{$\beta_p > \gamma_p$} \Comment{{\color{aogreen}Penalties overwhelm benefits}}
     \State Set \(u_p = 1\)
     \State Assign \(z_{p,c^*} = 1\) for \(c^* = \arg\min_c \delta(p,c)\)
   \EndIf
 \EndFor
 \For{each flow \(f \in \mathcal{F}\)}
-  \If{\(-\alpha - \lambda_f < 0\)} \Comment{{\color{aogreen}Negative coverage reward}}
-    \State Set \(w_f = 1\) \Comment{{\color{aogreen}Always true for \(\lambda_f \geq 0, \alpha > 0\)}}
+  \If{$\exists p \in \mathcal{P}_f : u_p = 1$} 
+    \State Set \(w_f = 1\) 
   \EndIf
 \EndFor
 \State \Return \(L(\boldsymbol{\lambda}) = \sum_p u_p (\beta_p + \gamma_p) + \sum_f w_f (-\alpha - \lambda_f)\)
@@ -234,32 +243,49 @@ subject to primal constraints in Eq.2-Eq.7.
 \label{alg:subgradient}
 \begin{algorithmic}[1]
 \footnotesize
-\Require Max iterations \(T\), step size \(\theta_t\)
+\Require Max iterations \(T\), \(\epsilon = 10^{-6}\)
 \Ensure \(\max_t L(\boldsymbol{\lambda}^{(t)})\)
-\State Initialize \(\lambda_f^{(0)} = 0\) \(\forall f \in \mathcal{F}\), \(t = 0\)
+\State Initialize \(\lambda_f^{(0)} = 0.5\), \(\forall f \in \mathcal{F}\), \(t = 0\)
+\State \(L_{\text{best}} \leftarrow -\infty\), \(\boldsymbol{\lambda}_{\text{best}} \leftarrow \boldsymbol{\lambda}^{(0)}\)
 \While{\(t < T\)}
   \State Solve \(L(\boldsymbol{\lambda}^{(t)})\) using Algorithm \ref{alg:solve-lagrangian}
-  \State Compute subgradient \(g_f^{(t)} = \sum_{p \in \mathcal{P}_f} u_p^* - w_f^*\)
-  \State Update \(\lambda_f^{(t+1)} = \max\left(0, \lambda_f^{(t)} + \theta_t g_f^{(t)}\right)\)
-  \State \(t \leftarrow t + 1\)
+  \State Compute subgradient $g_f^{(t)} = \sum_{p \in \mathcal{P}_f} u_p^* - w_f^*$ $\forall f \in \mathcal{F}$
+  \State Compute gradient norm \(\|g^{(t)}\| = \sqrt{\sum_f (g_f^{(t)})^2}\)
+  \State Compute step size \(\theta_t = \frac{1}{\sqrt{t+1}} \cdot \frac{|L(\boldsymbol{\lambda}^{(t)})|}{\max(\|g^{(t)}\|^2,\ \epsilon)}\)
+  \For{each flow \(f \in \mathcal{F}\)}
+    \State \(\lambda_f^{(t+1)} = \max\left(0, \min\left(2, \lambda_f^{(t)} + \theta_t g_f^{(t)}\right)\right)\) 
+  \EndFor
+  \If{\(L(\boldsymbol{\lambda}^{(t)}) > L_{\text{best}}\)}
+    \State \(L_{\text{best}} \leftarrow L(\boldsymbol{\lambda}^{(t)})\)
+    \State \(\boldsymbol{\lambda}_{\text{best}} \leftarrow \boldsymbol{\lambda}^{(t)}\)
+  \EndIf
+  \State $t \leftarrow t + 1$
 \EndWhile
-\State \Return \(\max_t L(\boldsymbol{\lambda}^{(t)})\)
+\State \Return \(L_{\text{best}}, \boldsymbol{\lambda}_{\text{best}}\)
 \end{algorithmic}
 \end{algorithm}
 
-According to the above relaxation, \sysname uses a master-slave algorithm to solve the problem: Algorithm~2 is the master that controls the optimization while Algorithm~1 is the slave that is invoked in each iteration to solve the Lagrangian subproblem. Specifically, Algorithm~2 iteratively tunes Lagrange multipliers $\boldsymbol{\lambda}$ to maximize the dual function. In each iteration $t$, it (1) inputs $\boldsymbol{\lambda}^{(t)}$ to Algorithm~1, (2) receives primal variables $u_p, w_f, z_{p,c}$ and dual bound $L(\boldsymbol{\lambda})$, (3) computes the subgradient $g_f^{(t)}$ (line~4), and updates $\boldsymbol{\lambda}^{(t+1)} = \max(0, \lambda_f^{(t)} + \theta_t g_f^{(t)})$ with $\theta_t = 1/\sqrt{t}$. 
+According to the above relaxation, \sysname uses a master-slave algorithm to solve the problem: Algorithm~2 is the master that controls the optimization while Algorithm~1 is the slave that is invoked in each iteration to solve the Lagrangian subproblem. Specifically, Algorithm~2 iteratively tunes Lagrange multipliers $\boldsymbol{\lambda}$ to maximize the dual function. In each iteration $t$, it (1) inputs $\boldsymbol{\lambda}^{(t)}$ to Algorithm~1, (2) receives primal variables $u_p, w_f, z_{p,c}$ and the dual bound $L(\boldsymbol{\lambda})$, (3) computes the normalized subgradient $g_f^{(t)}$, and updates $\boldsymbol{\lambda}^{(t+1)}$ while recording the best solution.
 
-In the step (1) of each iteration in Algorithm~2, Algorithm~1 computes optimal deployments for given $\boldsymbol{\lambda}$: for each switch $p$, it calculates the flow penalty $\beta_p = \sum_{f: p \in \mathcal{P}f} \lambda_f$ and collection cost $\gamma_p = (1-\alpha) \min_c \delta(p,c)$. If $\beta_p + \gamma_p < 0$, it selects $p$ to activate measurement, i.e., $u_p=1$, and assigns $p$ to the nearest control plane node, i.e., $z_{p,c^*}=1$, and then marks all flows covered, i.e., $w_f=1$, since $-\alpha - \lambda_f < 0$ always holds.
+In the step (1) of each iteration in Algorithm~2, Algorithm~1 computes the optimal deployments for given $\boldsymbol{\lambda}$: for each switch $p$, it calculates the flow penalty $\beta_p$ and collection cost $\gamma_p$. If $\beta_p > \gamma_p$, it selects $p$ to activate measurement, i.e., $u_p=1$, and assigns $p$ to the nearest control plane node, i.e., $z_{p,c^*}=1$. Next, for each flow $f$, it marks $w_f=1$ if there exists at least one selected switch on the flow's path (i.e., $\exists p \in \mathcal{P}_f: u_p=1$).
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=\linewidth]{pics/lglr.png}
+%     \caption{Lagrange relaxation of MonPlan.}
+%     \label{lglr}
+% \end{figure}
 
 \begin{theorem}[Weak Duality]
-The optimal dual value \(d^* = \max_{\boldsymbol{\lambda}} L(\boldsymbol{\lambda})\) is a lower bound on the primal optimal value \(p^*\):
-\[
-d^* \leq p^*
-\]
+The optimal dual value \(d^* = \max_{\boldsymbol{\lambda}} L(\boldsymbol{\lambda})\) is a lower bound on the primal optimal value \(p^*\).
+% \[
+% d^* \leq p^*
+% \]
 \end{theorem}
 
 \begin{proof}
 For any feasible primal solution \((\mathbf{u},\mathbf{w},\mathbf{z})\) and \(\boldsymbol{\lambda} \geq 0\):
+{\footnotesize
 \[
 \begin{aligned}
 L(\boldsymbol{\lambda}) &\leq -\alpha \sum_f w_f + (1-\alpha) \sum_{p,c} z_{p,c} \delta(p,c) \\
@@ -268,7 +294,9 @@ L(\boldsymbol{\lambda}) &\leq -\alpha \sum_f w_f + (1-\alpha) \sum_{p,c} z_{p,c}
 &= p_{\text{obj}} \quad \text{(since } \sum_{p \in \mathcal{P}_f} u_p - w_f \geq 0 \text{ by Eq.5)}
 \end{aligned}
 \]
-where $p_{\text{obj}}$ is the primal objective value for a feasible solution in the measurement point selection problem. Thus, \(d^* \leq p^*\).
+}
+
+\noindent where $p_{\text{obj}}$ is the primal objective value for a feasible solution in the measurement point selection problem. Thus, \(d^* \leq p^*\).
 \end{proof}
 
 \begin{theorem}[Optimality Gap]
@@ -281,6 +309,7 @@ where \(\boldsymbol{\lambda}^*\) are the optimal dual multipliers.
 
 \begin{proof}
 From complementary slackness:
+{\footnotesize
 \[
 \begin{aligned}
 p^* - d^* &= \left[ -\alpha \sum_f w_f^* + (1-\alpha) \sum_{p,c} z_{p,c}^* \delta(p,c) \right] - L(\boldsymbol{\lambda}^*) \\
@@ -288,16 +317,18 @@ p^* - d^* &= \left[ -\alpha \sum_f w_f^* + (1-\alpha) \sum_{p,c} z_{p,c}^* \delt
 &\leq 0 \quad \text{(because } w_f^* \leq \sum_{p \in \mathcal{P}_f} u_p^* \text{ and } \lambda_f^* \geq 0\text{)}
 \end{aligned}
 \]
-The gap equals the sum of violated coverage constraints scaled by \(\lambda_f^*\).
+}
+
+\noindent The gap equals the sum of violated coverage constraints scaled by \(\lambda_f^*\).
 \end{proof}
 
-\begin{theorem}[Time Complexity]
-Given a network $G = (V, E)$, programmable switches in $P \subseteq V$, control plane nodes in $C \subseteq V$, flows in $\mathcal{F}$, and flow-switch incidence sets $\{\mathcal{P}_f\}$, the time complexity of Algorithms 1-2 is $O(T \cdot |P| \cdot (d_{\max} + |C|))$, where $T$ is the iteration count, $d_{\max} = \max_{p \in P} |\{f : p \in \mathcal{P}_f\}|$, and $|C|$ is the number of control plane nodes.
-\end{theorem}
+% \begin{theorem}[Time Complexity]
+% Given a network $G = (V, E)$, programmable switches in $P \subseteq V$, control plane nodes in $C \subseteq V$, flows in $\mathcal{F}$, and flow-switch incidence sets $\{\mathcal{P}_f\}$, the time complexity of Algorithms 1-2 is $O(T \cdot |P| \cdot (d_{\max} + |C|))$, where $T$ is the iteration count, $d_{\max} = \max_{p \in P} |\{f : p \in \mathcal{P}_f\}|$, and $|C|$ is the number of control plane nodes.
+% \end{theorem}
 
-\begin{proof}
-The complexity is contributed by all the $T$ iterations of Algorithm 2, each of which invokes Algorithm 1. For Algorithm 1, it invokes: (1) for each $p \in P$, it computes $\beta_p = \sum_{f: p \in \mathcal{P}_f} \lambda_f$ in $O(d_p)$ time, where $d_p = |\{f : p \in \mathcal{P}_f\}| \leq d_{\max}$, (2) for each $p \in P$, it computes $\gamma_p = (1-\alpha) \min_{c \in C} \delta(p,c)$ in $O(|C|)$ time, (3) for each $p \in P$, it sets decision variables in $O(1)$ time. Thus, the time complexity of Algorithm 1 is $O(|P| \cdot (d_{\max} + |C|))$. For Algorithm 2, each iteration invokes: (1) $O(|P| \cdot (d_{\max} + |C|))$ Algorithm 1, (2) computing subgradient $g_f = \sum_{p \in \mathcal{P}_f} u_p$ for all $f \in \mathcal{F}$ in $O\left(\sum_f |\mathcal{P}_f|\right) = O(|P| \cdot d_{\max})$ time, and (3) updating multipliers in $O(|\mathcal{F}|) \subseteq O(|P| \cdot d_{\max})$ time. Thus, Algorithm~2 has $T$ iterations, yielding $O(T \cdot |P| \cdot (d_{\max} + |C|))$.
-\end{proof}
+% \begin{proof}
+% The complexity is contributed by all the $T$ iterations of Algorithm 2, each of which invokes Algorithm 1. For Algorithm 1, it invokes: (1) for each $p \in P$, it computes $\beta_p = \sum_{f: p \in \mathcal{P}_f} \lambda_f$ in $O(d_p)$ time, where $d_p = |\{f : p \in \mathcal{P}_f\}| \leq d_{\max}$, (2) for each $p \in P$, it computes $\gamma_p = (1-\alpha) \min_{c \in C} \delta(p,c)$ in $O(|C|)$ time, (3) for each $p \in P$, it sets decision variables in $O(1)$ time. Thus, the time complexity of Algorithm 1 is $O(|P| \cdot (d_{\max} + |C|))$. For Algorithm 2, each iteration invokes: (1) $O(|P| \cdot (d_{\max} + |C|))$ Algorithm 1, (2) computing subgradient $g_f = \sum_{p \in \mathcal{P}_f} u_p$ for all $f \in \mathcal{F}$ in $O\left(\sum_f |\mathcal{P}_f|\right) = O(|P| \cdot d_{\max})$ time, and (3) updating multipliers in $O(|\mathcal{F}|) \subseteq O(|P| \cdot d_{\max})$ time. Thus, Algorithm~2 has $T$ iterations, yielding $O(T \cdot |P| \cdot (d_{\max} + |C|))$.
+% \end{proof}
 
 % \begin{theorem}[Algorithm~1 Complexity]
 % The time complexity of Algorithm~1 is $\mathcal{O}(|P| \cdot (d_{\max} + |C|))$, where $|P|$ is the number of switches, $d_{\max} = \max_{p \in P} |\{f : p \in \mathcal{P}_f\}|$, and $|C|$ is the number of control plane nodes.
@@ -433,6 +464,13 @@ Finally, selected paths $\mathcal{P}_{p,c}$ and splitting ratios $\pi_{p,c}$ are
 %Andante employs a reinforcement learning (RL) framework to dynamically select (1) \textit{which paths} and (2) \textit{split ratios} for transferring measurement data from programmable switches ($p \in P \subseteq V$) to control plane nodes ($c \in C \subseteq V$) without congestion. The algorithm takes four key inputs (Line 1): (1) a \textit{trained policy network} $\pi_\theta$ (obtained via offline CPO training) that jointly outputs path selections $\mathcal{P}_{p,c}$ and splitting ratios $\pi_{p,c}$, (2) network topology $G = (V, E)$, (3) fixed worst-case rates $\{\Gamma_p^{\text{total}}\}_{p \in P}$, and (4) safety threshold $\tau$. 
 
 \section{Example of \sysname}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{pics/example.png}
+    \caption{Example of path selection in MonPlan.}
+    \label{example}
+\end{figure}
 
 We present a simple example to explain how \sysname works. 
 
