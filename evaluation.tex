@@ -64,8 +64,6 @@ Moreover, to quantify the solution quality of the last two types of techniques, 
 
 \noindent According to their differences, we use different baselines: (1) Volumetric applications focus on large flows while aggregated applications consider all flows. As such, we compare \sysname with sketches-only, INT-only, and hybrid baselines. (2) Troubleshooting applications rely on INT data, such that we only compare \sysname with INT-only and hybrid baselines. For the solutions that combine both sketches and INT, we use the sketch that yields the best results for a fair comparison. 
 
-\para{Metrics}. We use the precision, \emph{tp}/(\emph{tp}+\emph{fp}), the recall, \emph{tp}/(\emph{tp}+\emph{fn}), and the F1 score, 2\emph{tp}/(2\emph{tp}+\emph{fp}+\emph{fn}), where \emph{tp}, \emph{fp}, and \emph{fn} denote the number of true positives, false positives, and false negatives. 
-
 \subsection{Application-Level Benefits of \sysname}
 
 \para{\sysname brings accuracy and efficiency benefits to diverse applications}. 
@@ -78,7 +76,8 @@ In our testbed, we use \sysname and baselines to measure traffic, respectively. 
 
 \noindent \emph{(1) Evaluation with volumetric applications}
 
-According to the literature, we set the thresholds of HH to 10K packets, set the threshold of SS to 0.5\% of the total number of IP addresses, and set the threshold of DF to 0.5\% of the total number of five-tuples. PC considers per-flow packet counts. 
+According to the literature, we set the thresholds of HH to 10K packets, set the threshold of SS to 0.5\% of the total number of IP addresses, and set the threshold of DF to 0.5\% of the total number of five-tuples. PC considers per-flow packet counts. We use the precision, \emph{tp}/(\emph{tp}+\emph{fp}), the recall, \emph{tp}/(\emph{tp}+\emph{fn}), and the F1 score, 2\emph{tp}/(2\emph{tp}+\emph{fp}+\emph{fn}), where \emph{tp}, \emph{fp}, and \emph{fn} denote the number of true positives, false positives, and false negatives. 
+
 
 For HH, SS, DF, in Figure~4, \sysname achieves $3.3\times$ higher accuracy. This advantage originates from co-designing sketches and INT: sketches enable accurate measurement for large flows while INT mitigate the errors of measuring small flows, while using only sketches or INT alone drops accuracy: small flows in sketches suffer from hash collisions with large flows, while direct INT brings congestion and data loss. 
 
@@ -105,9 +104,9 @@ For FD, we change the flow identifier to two-tuple and five-tuple, respectively.
 
 \noindent \emph{(3) Evaluation with troubleshooting applications}
 
-For LM, 
+For LM, we collect the medium and tail latency for \emph{(switch, flow)} pairs. We replay the Web search \cite{alizadeh2010data} and Hadoop workloads \cite{roy2015inside} in our testbed. Moreover, we follow \cite{ben2020pint} to use KLL \cite{karnin2016optimal}, a quantitive algorithm, to analyze latencies in the control plane. We consider the average relative error (ARE) of the 50th and 99th percentile latencies. Figure 10 shows that \sysname optimizes the ARE for the 50th percentile latencies of PINT by up to 33\%, and decreases the ARE for the 99th percentile latencies of DeltaINT by up to 33\%. This is because \sysname carefully selects network paths to transfer measurement data, which avoids data loss and preserves application-level accuracy.
 
-For CC, 
+For CC, we exploit HPCC \cite{li2019hpcc} for congestion control that adjusts the servers' sending rates with respect to collected link utilization. We reuse the same workloads as the LM experiment. The metric we use to evaluate congestion control is \emph{slowdown}, which equals the ratio between the completion time of a flow when all other flows exist and when only the flow itself exists. A smaller slowdown corresponds to better congestion control. We consider the 95th percentile slowdown for each flow size. Figure 10 demonstrates that \sysname achieves more accurate congestion control. In contrast, due to the loss of collected link utilization, PINT and DeltaINT fail to adjust sending rates. 
 
 \subsection{Microbenchmarks}
 
