@@ -1,4 +1,4 @@
-\section{Overview of \sysname}\label{overview}
+\section{Overview of \sysname}\label{sec:overview}
 
 \begin{figure}
     \centering
@@ -149,7 +149,7 @@ $w_f$ & 0-1 variable = 1 if flow $f$ is covered (i.e., measured) \\
 (2) programmable switches $P \subseteq V$ supporting sketches and INT;
 (3) control plane nodes $C \subseteq V$;
 (4) a set $\mathcal{F}$ of flows, where each flow $f \in \mathcal{F}$ only indicates an OD pair $(o_f, d_f)$ \cite{liu2016one,anup2022hetero}, where $o_f$ and $d_f$ are the ingress and egress of $f$, respectively; 
-(5) for each flow $f$, the set $\mathcal{P}_f \subseteq P$ of switches on \emph{any shortest path} between $o_f$ and $d_f$;
+(5) for each flow $f$, the set $\mathcal{P}_f \subseteq P$ of switches on any shortest path between $o_f$ and $d_f$;
 and (6) the distance metric $\delta: V \times C \to \mathbb{R}^+$ (e.g., hop count between meaurement points and control plane).
 
 \para{Output.} The output comprises:
@@ -420,19 +420,6 @@ To sum up, the maximum possible rate of sending measurement data at switch $p$ i
 
 \noindent where $\mathbb{I}_{e \in \mathcal{P}_{p,c}}=1$ if link $e$ belongs to path $\mathcal{P}_{p,c}$; $\Gamma_e^{\text{data}}$ quantifies data plane traffic on $e$; and $\tau_e$ represents the safety threshold that avoids congestion (e.g., 0.8 of the link capacity).
 
-Here, the inputs include $q_e^t$, $C_e$, $\Gamma_p^{\text{total}}$, $\mathbb{I}_{e \in \mathcal{P}{p,c}}$, $\Gamma_e^{\text{data}}$, and $\tau_e$. \sysname obtains them as follows: $q_e^t$ is collected by INT; $C_e$ is the link capacity that is already known in topology information; $\Gamma_p^{\text{total}}$ is computed by Eq.12; $\mathbb{I}_{e \in \mathcal{P}{p,c}}$ is calculated via shortest path algorithms such as Dijkstra; $\Gamma_e^{\text{data}}$ can be direcly obtained using existing techniques such as sFlow \cite{sFlow} and NetFlow \cite{netflow}; and $\tau_e$ is user-configurable. 
-
-Next, the output of \sysname includes (1) which paths, i.e., $\mathcal{P}_{p,c}$, to transfer measurement data from switch $p$ to control plane node $c$, and (2) split ratios, i.e., $\pi_{p,c}$, that decide how to allocate measurement traffic across these paths. 
-
-Then \sysname solves the CMDP as follows. First, it trains the policy $\pi_\theta$ via offline constrained policy optimization (CPO) \cite{achiam2017constrained}. Such training employs a simulated network environment with the following components: 
-\begin{itemize}[leftmargin=*,noitemsep]
-\item \textit{State}: $s_t = \left( \{ \Gamma_e^{\text{data}}/C_e \}, \{q_e^t\}, \{\Gamma_p^{\text{total}}\} \right)$.
-\item \textit{Action}: (1) paths in $\{\mathcal{P}_{p,c}\}$, and (2) splitting ratios $\pi_{p,c}$.
-\item \textit{Reward}: $r_t = -\sum_{e \in E} q_e^t - \eta \cdot \mathbb{I}_{\text{violation}}$, where $-\sum_{e \in E} q_e^t$ encourages RL to minimize network congestion, and $\eta \cdot \mathbb{I}_{\text{violation}}$ penalizes constraint violations: $\eta$ is a large penalty weight (e.g., $10^6$) and $\mathbb{I}_{\text{violation}}=1$ if $\Gamma_e^{\text{data}} + \Gamma_e^{\text{meas}} > \tau C_e \text{ for any } e$. 
-\end{itemize}
-
-\noindent With these components, \sysname maximizes $r_t$ while satisfying Eq.15 via Lagrangian relaxation. After $O(10^5)$ training steps with real traffic traces (e.g., CAIDA), $\pi_\theta$ is converged and is deployed for online inference.
-
 \begin{algorithm}[t]
 \caption{Congestion-free path selection}
 \begin{algorithmic}[1]
@@ -456,6 +443,19 @@ Then \sysname solves the CMDP as follows. First, it trains the policy $\pi_\thet
 \EndLoop
 \end{algorithmic}
 \end{algorithm}
+
+Here, the inputs include $q_e^t$, $C_e$, $\Gamma_p^{\text{total}}$, $\mathbb{I}_{e \in \mathcal{P}{p,c}}$, $\Gamma_e^{\text{data}}$, and $\tau_e$. \sysname obtains them as follows: $q_e^t$ is collected by INT; $C_e$ is the link capacity that is already known in topology information; $\Gamma_p^{\text{total}}$ is computed by Eq.12; $\mathbb{I}_{e \in \mathcal{P}{p,c}}$ is calculated via shortest path algorithms such as Dijkstra; $\Gamma_e^{\text{data}}$ can be direcly obtained using existing techniques such as sFlow \cite{sFlow} and NetFlow \cite{netflow}; and $\tau_e$ is user-configurable. 
+
+Next, the output of \sysname includes (1) which paths, i.e., $\mathcal{P}_{p,c}$, to transfer measurement data from switch $p$ to control plane node $c$, and (2) split ratios, i.e., $\pi_{p,c}$, that decide how to allocate measurement traffic across these paths. 
+
+Then \sysname solves the CMDP as follows. First, it trains the policy $\pi_\theta$ via offline constrained policy optimization (CPO) \cite{achiam2017constrained}. Such training employs a simulated network environment with the following components: 
+\begin{itemize}[leftmargin=*,noitemsep]
+\item \textit{State}: $s_t = \left( \{ \Gamma_e^{\text{data}}/C_e \}, \{q_e^t\}, \{\Gamma_p^{\text{total}}\} \right)$.
+\item \textit{Action}: (1) paths in $\{\mathcal{P}_{p,c}\}$, and (2) splitting ratios $\pi_{p,c}$.
+\item \textit{Reward}: $r_t = -\sum_{e \in E} q_e^t - \eta \cdot \mathbb{I}_{\text{violation}}$, where $-\sum_{e \in E} q_e^t$ encourages RL to minimize network congestion, and $\eta \cdot \mathbb{I}_{\text{violation}}$ penalizes constraint violations: $\eta$ is a large penalty weight (e.g., $10^6$) and $\mathbb{I}_{\text{violation}}=1$ if $\Gamma_e^{\text{data}} + \Gamma_e^{\text{meas}} > \tau C_e \text{ for any } e$. 
+\end{itemize}
+
+\noindent With these components, \sysname maximizes $r_t$ while satisfying Eq.15 via Lagrangian relaxation. After $O(10^5)$ training steps with real traffic traces (e.g., CAIDA), $\pi_\theta$ is converged and is deployed for online inference.
 
 With $\pi_\theta$, \sysname creates a RL framework in Algorithm~3. Initially (lines~1-2), it precomputes $k$ candidate paths in $\{\mathcal{P}_{p,c}\}$ between all $p$-$c$ pairs and initializes uniform splitting ratios, i.e., $\pi_{p,c} = 1/|C|$. At each timestep $t$ (loop in line~3), $q_e^t$ and $\Gamma_e^{\text{data}}$ are collected and transformed into state $s_t$ (lines~4-5). Then the RL policy $\pi_\theta$ yields path selections and raw splitting ratios (line~6). 
 After computing $\Gamma_e^{\text{meas}}$ via Eq.16 (line~7), \sysname enforces bandwidth constraints via scaling and normalization (lines~8-9). 
