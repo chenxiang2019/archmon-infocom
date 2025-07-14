@@ -17,16 +17,24 @@
 %
 \end{itemize}
 
-\para{Key idea}. According to our analysis, we observe that sketches and INT complement each other. More precisely, in Table~I, we summarize the advantages and limitations of sketches and INT: Sketches exhibit both high accuracy and resource efficiency for large flows, but they fall short for small flows; INT can provide high accuracy for both large and small flows, but they come at the cost of high resource consumption. 
+\para{Key idea}. We observe that sketches and INT complement each other. More precisely, sketches exhibit both high accuracy and resource efficiency for large flows, but they fall short for small flows; INT can provide high accuracy for both large and small flows, but they come at the cost of high resource consumption. 
 
-In this context, we conclude the opportunities of combining sketches and INT: we can use sketches to measure large flows while using INT to measure small flows. Doing so can achieve both high accuracy and resource efficiency. In detail, traffic in modern networks is skewed \cite{roy2015inside,huang2021toward,caida,benson2010network,yang2018elastic}. So most packets originate from large flows, which are accurately and efficiently measured by sketches. For other packets from small flows, they are measured by INT, ensuring their full accuracy. Also, their number is small, limiting INT's resource consumption. Hence, both \textbf{G1} and \textbf{G2} can be achieved. 
+%in Table~I, we summarize the advantages and limitations of sketches and INT: \textbf{}
+
+In this context, 
+%we conclude the opportunities of combining sketches and INT: 
+we can use sketches to measure large flows while using INT to measure small flows. 
+Specifically, before a flow becomes a large flow, its packets will be measured by both sketches and INT. Once it is identified by sketches as a large flow, it will be only recorded by sketches. 
+Doing so can achieve both high accuracy and resource efficiency. In detail, traffic in modern networks is skewed \cite{roy2015inside,huang2021toward,caida,benson2010network,yang2018elastic}. So most packets originate from large flows, which are accurately and efficiently measured by sketches. For other packets from small flows, they are measured by INT, ensuring their full accuracy. Also, their number is small, limiting INT's resource consumption. Hence, both \textbf{G1} and \textbf{G2} can be achieved simultaneously. 
 
 \para{Challenges}.
 However, while it is technically sound, leveraging these opportunities faces two optimization challenges.
 
 \begin{itemize}[leftmargin=*]
 %
-    \item \textbf{C1: Measurement point selection with incomplete knowledge}. Traffic routing details are usually unknown in advance. As such, selecting measurement points (i.e., the switches that execute sketches and INT) is non-trivial. First, guaranteeing that every flow traverses at least one point when routing paths are unknown is challenging. This uncertainty may result in over-provisioning of measurement points, increasing deployment overheads. Second, measurement points should be close to the control plane. Otherwise, measurement data collection may suffer from high latency, delaying network management. Thus, without precise path knowledge, achieving both high coverage and low collection latency is NP-hard. 
+    \item \textbf{C1: Measurement point selection with incomplete knowledge}. Traffic routing details are usually unknown in advance. As such, selecting measurement points (i.e., switches that run sketches and INT) is non-trivial. First, the uncertainty of routing paths may result in over-provisioning of measurement points, increasing deployment overheads. Second, measurement points should be close to the control plane. Otherwise, measurement data collection may suffer from high latency. In summary, without routing information, selecting points with both high coverage and low collection latency is NP-hard. 
+%delaying network management
+% guaranteeing that every flow traverses at least one point when routing paths are unknown is challenging. 
 %
 %    \item \textbf{C2: General data reduction for heterogeneous measurement data}. For resource efficiency, measurement data should be minimized to save network bandwidth and control plane resources. However, such reduction faces the inherent heterogeneity between sketch data (e.g., structured counter arrays) and INT headers (e.g., unstructured hop-by-hop metadata). Specifically, reducing sketch data needs to preserve counter relationships over time, while reducing INT data should avoid modifying original per-switch information. Such differences impede the design of reducing measurement data. Without careful analysis, simply collaborating existing data reduction techniques would be ineffective and even hurt data integrity. 
 %
@@ -35,7 +43,7 @@ However, while it is technically sound, leveraging these opportunities faces two
 %
 \end{itemize}
 
-\para{Design}. In response, we design \sysname, a framework that co-designs sketches and INT to collectively achieve high accuracy (\textbf{G1}) and resource efficiency (\textbf{G2}). To address the above challenges, \sysname embraces two-pronged system mechanisms. 
+\para{Design}. In response, we design \sysname, a framework that co-designs sketches and INT to collectively achieve high accuracy (\textbf{G1}) and resource efficiency (\textbf{G2}). To address the challenges, \sysname embraces two-pronged optimizations. 
 
 \begin{itemize}[leftmargin=*]
 %
@@ -47,7 +55,7 @@ However, while it is technically sound, leveraging these opportunities faces two
 %
 \end{itemize}
 
-\para{Architecture}. Figure~2 presents the architecture of \sysname, which employs a four-step workflow. 
+\para{Architecture}. In Figure~2, \sysname uses a four-step workflow:
 
 \begin{itemize}[leftmargin=*]
 %
@@ -166,6 +174,8 @@ and (5) $w_f \in \{0,1\}$ $\forall f \in \mathcal{F}$: $w_f=1$ if flow $f$ is co
 \end{equation}
 where the user-configurable parameter $\alpha \in [0,1]$ balances the objective of maximizing coverage and that of minimizing the distances between selected switches and control plane nodes. 
 
+There also exist other objectives, e.g., maximizing the number of covered switches or links. Supporting these objectives is simple, i.e., replacing Eq.1 with user-specified objectives. 
+
 \para{Constraints.} The problem has the following major constraints: Eq.2-4 bound the number of selected switches; Eq.5 presents that when a flow $f$ is covered, at least one switch on the shortest paths that connect the OD pair of $f$ should be selected; Eq.6 shows that each selected switch should send data to a control plane node; and Eq.7 limits decision variables. 
 
 \vspace{-7pt}
@@ -178,8 +188,6 @@ where the user-configurable parameter $\alpha \in [0,1]$ balances the objective 
 \text{Data collection: } &\sum_{c \in C} z_{p,c} = u_p \quad \forall p \in P \\
 \text{0-1 decisions: } &x_p, y_p, u_p, w_f, z_{p,c} \in \{0,1\}
 \end{align}}
-
-There also exist other objectives, e.g., maximizing the number of covered switches or the number of covered links. While our focus is flow coverage, supporting other objectives is still simple, i.e., replacing Eq.1 with user-specified objectives. 
 
 \para{Hardness}. This measurement point selection problem is NP-hard. First, according to its dual combinatorial structures, this problem reduces to the set cover problem: each programmable switch $p \in P$ corresponds to the set $S_p = \{ f \in \mathcal{F} \mid p \in \mathcal{P}_f \}$ covering the flows possibly traversing $p$. This step establishes a set system with the universe $U = \mathcal{F}$ and collection $\mathcal{S} = \{ S_p \}$, where maximizing coverage $\sum w_f$ equals minimizing uncovered flows (i.e., a standard NP-hard set cover problem). Second, the objective of minimizing distances, i.e., $\sum z_{p,c} \delta(p,c)$, forms an uncapacitated facility location subproblem, in which selected switches, i.e., $u_p=1$, are facilities, control plane nodes in $C$ are clients, and $\delta(p,c)$ are assignment costs. 
 
@@ -208,9 +216,9 @@ L(\boldsymbol{\lambda}) = &\min_{\mathbf{u},\mathbf{w},\mathbf{z}} \left[
 
 In this context, the dual of the Lagrangian relaxation is:
 \begin{align}
-\max_{\lambda_f \geq 0} L(\boldsymbol{\lambda}) 
+\max_{\lambda_f \geq 0} L(\boldsymbol{\lambda}), \, \text{ s.t. Eq.2-Eq.7}
 \end{align}
-subject to primal constraints in Eq.2-Eq.7. 
+%subject to primal constraints in Eq.2-Eq.7. 
 %The solution is attained via subgradient ascent: $\lambda_f^{(t+1)} = \max\left(0, \lambda_f^{(t)} + \frac{1}{\sqrt{t}} \left( \sum_{p \in \mathcal{P}_f} u_p - w_f \right)\right)$.
 
 \begin{algorithm}[t]
@@ -301,9 +309,10 @@ L(\boldsymbol{\lambda}) &\leq -\alpha \sum_f w_f + (1-\alpha) \sum_{p,c} z_{p,c}
 
 \begin{theorem}[Optimality Gap]
 Let \((\mathbf{u}^*,\mathbf{w}^*,\mathbf{z}^*)\) be the primal optimal solution. The optimality gap satisfies:
+{\footnotesize
 \[
 p^* - d^* \leq \sum_{f \in \mathcal{F}} \lambda_f^* \left( \sum_{p \in \mathcal{P}_f} u_p^* - w_f^* \right)
-\]
+\]}
 where \(\boldsymbol{\lambda}^*\) are the optimal dual multipliers.
 \end{theorem}
 
@@ -376,27 +385,30 @@ p^* - d^* &= \left[ -\alpha \sum_f w_f^* + (1-\alpha) \sum_{p,c} z_{p,c}^* \delt
 \para{Estimating worst-case sending rates}. \sysname models both sketch and INT data. For sketch data, the worst-case sending rate $\gamma_k^{\text{sketch}}$ for sketch $k$ is determined by:
 
 \vspace{-4pt}
+{\footnotesize
 \begin{align}
 \gamma_k^{\text{sketch}} = \frac{S_k}{T_k}
-\end{align}
+\end{align}}
 
 \noindent where $S_k$ and $T_k$ refer to the sketch size in bytes and the collection window in seconds, respectively. This equation denotes that the data recorded in sketch counter arrays are periodically flushed to the control plane at the end of each window, e.g., for the sketch with 10\,MB memory, a measurement window of 1\,ms corresponds to a $\gamma_k^{\text{sketch}}=\frac{10^{6}\,\text{bytes}}{10^{-3}\,\text{s}}=8\,\text{Gbps}$.  
 
 For INT data, the worst-case rate $\gamma_p^{\text{INT}}$ at switch $p$ is:
 
 \vspace{-4pt}
+{\footnotesize
 \begin{align}
 \gamma_p^{\text{INT}} = \left( \frac{C_p \times \phi}{\mu} \right)\times B_{\text{INT}} 
-\end{align}
+\end{align}}
 
 \noindent where $C_p$ refers to the bandwidth capacity of each link while $\phi$ is the maximum possible fraction of link bandwidth that can be consumed by small flows. $\phi$ can be obtained by analyzing historical traffic data \cite{roy2015inside}. $C_p\times \phi$ denotes the maximum possible byte rate contributed by small flows on a link. Moreover, since INT overheads are per-packet, \sysname converts the byte rate of $C_p\times \phi$ to the packet rate to estimate INT overheads, where $\mu$ denotes the average packet size in small flows. As such, the maximum packet rate of small flows becomes $\frac{C_p \times \phi}{\mu}$. So Eq.10 estimates the bandwidth overheads consumed by INT headers per second, where $B_{\text{INT}}$ is the size of INT headers per packet. 
 
 To sum up, the maximum possible rate of sending measurement data at switch $p$ is estimated as
 
 \vspace{-4pt}
+{\footnotesize
 \begin{align}
 \Gamma_p^{\text{total}} = \sum_{k \in \mathcal{K}_p} \gamma_k^{\text{sketch}} + \gamma_p^{\text{INT}}
-\end{align}
+\end{align}}
 
 \noindent where $\mathcal{K}_p$ is the set of sketches at $p$. 
 
@@ -405,18 +417,20 @@ To sum up, the maximum possible rate of sending measurement data at switch $p$ i
 \para{Reinforcement learning (RL) for dynamic path selection}. Given the worst-case estimates in $\{\Gamma_p^{\text{total}}\}$, \sysname formulates dynamic path selection based on a constrained Markov decision process (CMDP) to avoid saturating network paths, i.e.
 
 \vspace{-4pt}
+{\footnotesize
 \begin{align}
 \min_{\pi}  & \quad \mathbb{E}\left[\sum_{t=0}^T \sum_{e \in E} q_e^t \right] \\
 \text{s.t.} & \quad \sum_{c \in C} \pi_{p,c} = 1 \quad \forall p \in P  \\
             & \quad \Gamma_e^{\text{meas}} \leq \tau_e C_e - \Gamma_e^{\text{data}} \quad \forall e \in E 
-\end{align}
+\end{align}}
 
 \noindent where $q_e^t$ represents the queue depth in bytes on link $e$ at time $t$; $\pi_{p,c}$ is the fraction of measurement data streams from switch $p$ to control plane node $c$; $\Gamma_e^{\text{meas}}$ quantifies the measurement data streams on link $e$, i.e. 
 
 \vspace{-4pt}
+{\footnotesize
 \begin{align}
     \Gamma_e^{\text{meas}} = \sum_{p} \sum_{c} \pi_{p,c} \cdot \Gamma_p^{\text{total}} \cdot \mathbb{I}_{e \in \mathcal{P}_{p,c}}
-\end{align}
+\end{align}}
 
 \noindent where $\mathbb{I}_{e \in \mathcal{P}_{p,c}}=1$ if link $e$ belongs to path $\mathcal{P}_{p,c}$; $\Gamma_e^{\text{data}}$ quantifies data plane traffic on $e$; and $\tau_e$ represents the safety threshold that avoids congestion (e.g., 0.8 of the link capacity).
 
@@ -455,7 +469,7 @@ Then \sysname solves the CMDP as follows. First, it trains the policy $\pi_\thet
 \item \textit{Reward}: $r_t = -\sum_{e \in E} q_e^t - \eta \cdot \mathbb{I}_{\text{violation}}$, where $-\sum_{e \in E} q_e^t$ encourages RL to minimize network congestion, and $\eta \cdot \mathbb{I}_{\text{violation}}$ penalizes constraint violations: $\eta$ is a large penalty weight (e.g., $10^6$) and $\mathbb{I}_{\text{violation}}=1$ if $\Gamma_e^{\text{data}} + \Gamma_e^{\text{meas}} > \tau C_e \text{ for any } e$. 
 \end{itemize}
 
-\noindent With these components, \sysname maximizes $r_t$ while satisfying Eq.15 via Lagrangian relaxation. After $O(10^5)$ training steps with real traffic traces (e.g., CAIDA), $\pi_\theta$ is converged and is deployed for online inference.
+\noindent With the above components, \sysname maximizes $r_t$ while satisfying Eq.15 via Lagrangian relaxation. After $O(10^5)$ training steps with real traffic traces (e.g., CAIDA), $\pi_\theta$ is converged and is deployed for online inference.
 
 With $\pi_\theta$, \sysname creates a RL framework in Algorithm~3. Initially (lines~1-2), it precomputes $k$ candidate paths in $\{\mathcal{P}_{p,c}\}$ between all $p$-$c$ pairs and initializes uniform splitting ratios, i.e., $\pi_{p,c} = 1/|C|$. At each timestep $t$ (loop in line~3), $q_e^t$ and $\Gamma_e^{\text{data}}$ are collected and transformed into state $s_t$ (lines~4-5). Then the RL policy $\pi_\theta$ yields path selections and raw splitting ratios (line~6). 
 After computing $\Gamma_e^{\text{meas}}$ via Eq.16 (line~7), \sysname enforces bandwidth constraints via scaling and normalization (lines~8-9). 
@@ -463,7 +477,7 @@ Finally, selected paths $\mathcal{P}_{p,c}$ and splitting ratios $\pi_{p,c}$ are
 
 %Andante employs a reinforcement learning (RL) framework to dynamically select (1) \textit{which paths} and (2) \textit{split ratios} for transferring measurement data from programmable switches ($p \in P \subseteq V$) to control plane nodes ($c \in C \subseteq V$) without congestion. The algorithm takes four key inputs (Line 1): (1) a \textit{trained policy network} $\pi_\theta$ (obtained via offline CPO training) that jointly outputs path selections $\mathcal{P}_{p,c}$ and splitting ratios $\pi_{p,c}$, (2) network topology $G = (V, E)$, (3) fixed worst-case rates $\{\Gamma_p^{\text{total}}\}_{p \in P}$, and (4) safety threshold $\tau$. 
 
-\section{Example of \sysname}
+\section{Example of \sysname's Optimizations}
 
 \begin{figure}
     \centering
@@ -472,11 +486,11 @@ Finally, selected paths $\mathcal{P}_{p,c}$ and splitting ratios $\pi_{p,c}$ are
     \label{example}
 \end{figure}
 
-We present a simple example to explain how \sysname works. 
+%We present a simple example to explain how \sysname works. 
 
-\para{Settings}. We consider a network comprising a triangle of three programmable switches, $p_1$, $p_2$, $p_3$. All links are 10-Gbps. The control plane is directly connected to $p_2$. Five flows traverse the network: a video flow $f_1$ with the OD pair of ($p_1$,$p_2$), a RPC flow $f_2$ with the OD pair of ($p_1$,$p_3$), a database flow $f_3$ with the OD pair of ($p_2$,$p_3$), an IoT flow $f_4$ with the OD pair of ($p_3$,$p_1$), and a backup flow $f_5$ with the OD pair of ($p_3$,$p_2$). $f_1$, $f_3$, and $f_5$ are large flows while small flows are $f_2$ and $f_4$. The safety threshold $\tau$ is 0.8 of link capacity. 
+\para{Settings}. The network is a triangle of three switches, $p_1$, $p_2$, $p_3$. All links are 10-Gbps. The control plane is directly connected to $p_2$. Five flows traverse the network: a video flow $f_1$ with the OD pair of ($p_1$,$p_2$), a RPC flow $f_2$ with the OD pair of ($p_1$,$p_3$), a database flow $f_3$ with the OD pair of ($p_2$,$p_3$), an IoT flow $f_4$ with the OD pair of ($p_3$,$p_1$), and a backup flow $f_5$ with the OD pair of ($p_3$,$p_2$). $f_1$, $f_3$, and $f_5$ are large flows while small flows are $f_2$ and $f_4$. The safety threshold $\tau$ is 0.8 of link capacity. 
 
-\para{Measurement point selection}. \sysname selects $p_2$ to deploy sketches. For large flows, $p_2$ covers all large flows, minimizing resource usage and data collection distance. For small flows, $p_1$ monitors $f_2$ while S3 monitors $f_4$. This decision achieves 100\% coverage while reducing the number of activated switches by 33\% compared to full INT deployment. 
+\para{Measurement point selection}. \sysname selects $p_2$ to deploy sketches. For large flows, $p_2$ covers all large flows. For small flows, $p_1$ monitors $f_2$; $p_3$ monitors $f_4$. This decision achieves 100\% coverage while reducing the number of activated switches by 33\% compared to full INT deployment. 
 
 %Thus, it balancing the tradeoff between coverage efficiency and proximity constraints through penalty weight optimization.
 
