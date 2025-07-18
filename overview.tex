@@ -173,8 +173,8 @@ and (5) $w_f \in \{0,1\}$ $\forall f \in \mathcal{F}$: $w_f=1$ if flow $f$ is co
 \label{eq:objective}
 \end{equation}
 where the user-configurable parameter $\alpha \in [0,1]$ balances the objective of maximizing coverage and that of minimizing the distances between selected switches and control plane nodes. 
-
-There also exist other objectives, e.g., maximizing the number of covered switches or links. Supporting these objectives is simple, i.e., replacing Eq.1 with user-specified objectives. 
+\sysname also considers other objectives, e.g., minimizing the number of selected switches, which is elided for simplicity since this paper focuses on coverage. 
+%Supporting these objectives is simple, i.e., replacing Eq.1 with user-specified objectives. 
 
 \para{Constraints.} The problem has the following major constraints: Eq.2-4 bound the number of selected switches; Eq.5 presents that when a flow $f$ is covered, at least one switch on the shortest paths that connect the OD pair of $f$ should be selected; Eq.6 shows that each selected switch should send data to a control plane node; and Eq.7 limits decision variables. 
 
@@ -477,7 +477,7 @@ Finally, selected paths $\mathcal{P}_{p,c}$ and splitting ratios $\pi_{p,c}$ are
 
 %Andante employs a reinforcement learning (RL) framework to dynamically select (1) \textit{which paths} and (2) \textit{split ratios} for transferring measurement data from programmable switches ($p \in P \subseteq V$) to control plane nodes ($c \in C \subseteq V$) without congestion. The algorithm takes four key inputs (Line 1): (1) a \textit{trained policy network} $\pi_\theta$ (obtained via offline CPO training) that jointly outputs path selections $\mathcal{P}_{p,c}$ and splitting ratios $\pi_{p,c}$, (2) network topology $G = (V, E)$, (3) fixed worst-case rates $\{\Gamma_p^{\text{total}}\}_{p \in P}$, and (4) safety threshold $\tau$. 
 
-\section{Example of \sysname's Optimizations}
+%\section{Example of \sysname's Optimizations}
 
 \begin{figure}
     \centering
@@ -488,13 +488,16 @@ Finally, selected paths $\mathcal{P}_{p,c}$ and splitting ratios $\pi_{p,c}$ are
 
 %We present a simple example to explain how \sysname works. 
 
-\para{Settings}. The network is a triangle of three switches, $p_1$, $p_2$, $p_3$. All links are 10-Gbps. The control plane is directly connected to $p_2$. Five flows traverse the network: a video flow $f_1$ with the OD pair of ($p_1$,$p_2$), a RPC flow $f_2$ with the OD pair of ($p_1$,$p_3$), a database flow $f_3$ with the OD pair of ($p_2$,$p_3$), an IoT flow $f_4$ with the OD pair of ($p_3$,$p_1$), and a backup flow $f_5$ with the OD pair of ($p_3$,$p_2$). $f_1$, $f_3$, and $f_5$ are large flows while small flows are $f_2$ and $f_4$. The safety threshold $\tau$ is 0.8 of link capacity. 
+\para{Example}. Figure~\ref{example} is the triangle of three switches, $p_1$, $p_2$, $p_3$. All links are 10-Gbps. The control plane is directly connected to $p_2$. Five flows traverse the network: a video flow $f_1$ with the OD pair of ($p_1$,$p_2$), a RPC flow $f_2$ with the OD pair of ($p_1$,$p_3$), a database flow $f_3$ with the OD pair of ($p_2$,$p_3$), an IoT flow $f_4$ with the OD pair of ($p_3$,$p_1$), and a backup flow $f_5$ with the OD pair of ($p_3$,$p_2$). $f_1$, $f_3$, and $f_5$ are large flows while small flows are $f_2$ and $f_4$. The safety threshold $\tau$ is 0.8 of link capacity. 
+Suppose that \sysname selects $p_2$ to run sketches and cover all large flows. For small flows, $p_1$ monitors $f_2$; $p_3$ monitors $f_4$. 
 
-\para{Measurement point selection}. \sysname selects $p_2$ to deploy sketches. For large flows, $p_2$ covers all large flows. For small flows, $p_1$ monitors $f_2$; $p_3$ monitors $f_4$. This decision achieves 100\% coverage while reducing the number of activated switches by 33\% compared to full INT deployment. 
+%\para{Measurement point selection}. 
+%This decision achieves 100\% coverage while reducing the number of activated switches by 33\% compared to full INT deployment. 
 
 %Thus, it balancing the tradeoff between coverage efficiency and proximity constraints through penalty weight optimization.
 
-\para{Measurement data collection}. Consider the state $s_t$: (1) link utilizations: $p_1\leftrightarrow p_3=20$\%, $p_2\leftrightarrow p_3=70$\%, $p_1\leftrightarrow p_2=20$\%; (2) queue depths: 40\,KB in each switch; (3) worst-case measurement data rates: $\Gamma_{p_1}^{\text{total}}=3$\,Gbps, $\Gamma_{p_2}^{\text{total}}=1$\,Gbps, and $\Gamma_{p_3}^{\text{total}}=2$\,Gbps. The RL policy $\pi_{\theta}$ in \sysname decides to (1) deliver 100\% $p_1$'s INT data using the path $p_1\leftrightarrow p_2$, and (2) deliver 100\% $p_3$'s INT data using the path $p_3\rightarrow p_1\rightarrow p_2$. Otherwise, if $p_3$ sends INT data to $p_2$, the link $p_2\leftrightarrow p_3$ suffers from the load of 8\,Gbps, which violates the safety threshold $\tau$: $\Gamma_{p_3}^{\text{total}}+70$\%$\times 10$\,Gbps$=9$\,Gbps $> \tau\times 10$\,Gbps$=8$\,Gbps. This also avoids congesting other paths, e.g., for the path $p_1 \leftrightarrow p_2$, $\Gamma_{p_1}^{\text{total}}+\Gamma_{p_3}^{\text{total}}+20$\%$\times 10$\,Gbps$=7$\,Gbps $< \tau\times 10$\,Gbps$=8$\,Gbps, preserving the safety threshold and avoid data loss. 
+%\para{Measurement data collection}. 
+Consider the state $s_t$: (1) link utilizations: $p_1\leftrightarrow p_3=20$\%, $p_2\leftrightarrow p_3=70$\%, $p_1\leftrightarrow p_2=20$\%; (2) queue depths: 40\,KB in each switch; (3) worst-case measurement data rates: $\Gamma_{p_1}^{\text{total}}=3$\,Gbps, $\Gamma_{p_2}^{\text{total}}=1$\,Gbps, and $\Gamma_{p_3}^{\text{total}}=2$\,Gbps. The RL policy $\pi_{\theta}$ in \sysname decides to (1) deliver 100\% $p_1$'s INT data using the path $p_1\leftrightarrow p_2$, and (2) deliver 100\% $p_3$'s INT data using the path $p_3\rightarrow p_1\rightarrow p_2$. This avoids congesting other paths, e.g., for the path $p_1 \leftrightarrow p_2$, $\Gamma_{p_1}^{\text{total}}+\Gamma_{p_3}^{\text{total}}+20$\%$\times 10$\,Gbps$=7$\,Gbps $< \tau\times 10$\,Gbps$=8$\,Gbps, preserving the safety threshold. Otherwise, if $p_3$ sends INT data to $p_2$, the link $p_2\leftrightarrow p_3$ suffers from the load of 8\,Gbps, which violates the safety threshold $\tau$: $\Gamma_{p_3}^{\text{total}}+70$\%$\times 10$\,Gbps$=9$\,Gbps $> \tau\times 10$\,Gbps$=8$\,Gbps. 
 
 % Queue depths: S1→S3=120 KB (congested), others=40 KB
 

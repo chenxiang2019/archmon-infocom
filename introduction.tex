@@ -1,8 +1,8 @@
 \section{Introduction}
 
-Network measurement measures traffic statistics such as per-flow packet counts in switches and periodically collects these measurement data to the control plane. The control plane offers these data to network management applications that identify the events of their interest and making corresponding decisions. 
+Network measurement measures traffic statistics such as per-flow packet counts in switches and periodically collects these measurement data to the control plane. The control plane offers these data to network management applications that identify the events of their interest and making corresponding decisions \cite{huang2025adaptive}. 
 
-In particular, both large flows (i.e., the flows that comprise a lot of packets) and small flows are essential to measurement: volumetric applications that query the sizes of each flow, e.g., heavy hitter and superspreader detection \cite{liu2016one,huang2017sketchvisor}, make decisions on large flows, while other types of applications, including flow size distribution \cite{chen2021mtp} and congestion control \cite{ben2020pint,sheng2021deltaint}, address the importance of accurately measuring small flows. 
+In particular, both large flows (i.e., the flows that comprise a lot of packets) and small flows are essential to measurement: volumetric applications that query the sizes of each flow, e.g., heavy hitter and superspreader detection \cite{huang2021spread,huang2017sketchvisor}, make decisions on large flows, while other types of applications, including flow size distribution \cite{chen2021mtp} and congestion control \cite{ben2020pint,sheng2021deltaint}, address the importance of accurately measuring small flows. 
 
 
 %has been a fundamental component in modern networks. For example, it enables traffic monitoring and engineering in data center networks \cite{li2016flowradar,woodruff2019measuring,zhang2017high} and wide-area networks \cite{huang2017sketchvisor,liu2016one,caida}, and supports network latency monitoring in distributed large language model training scenarios \cite{qian2024alibaba}. 
@@ -44,7 +44,7 @@ We summarize our contributions as follows.
 %
     \item \sysname integrates the worst-case estimations, which model sending rates of measurement data with bursts, into reinforcement learning that dynamically selects paths to transfer data from switches to the control plane without congestions (\S\ref{collection}).
 %
-    \item We have implemented \sysname on our testbed that comprises $64\times 400$\,Gbps Tofino2 switches \cite{tofino2}. Extensive experiments with ten large-scale real-world topologies and eight network management applications show that \sysname provides up to $5\times$ accuracy and reduces resource consumption by $5\times$ when compared with five types of existing techniques (\S\ref{eval}).
+    \item We have implemented \sysname on our testbed that comprises 12.8\,Tbps programmable switches \cite{tofino2}. Testbed experiments with ten large-scale real-world topologies and eight network management applications show that \sysname provides up to $5\times$ accuracy and reduces resource consumption by $5\times$ when compared with five types of existing techniques (\S\ref{eval}).
     %Testbed experiments indicate that \sysname outperforms existing standalone sketches or INT techniques with accuracy improvement (e.g., $3\times$ F1 scores) and orders-of-magnitude lower overheads. 
 %
 \end{itemize}
